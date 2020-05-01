@@ -1,9 +1,5 @@
 package merk
 
-import (
-	"errors"
-)
-
 type LinkType uint8
 
 const (
@@ -21,17 +17,17 @@ type Link struct {
 	tree *Tree
 }
 
-func fromModifiedTree(maybeTree *Tree) *Link {
-	var pending_writes uint8 = 1
-		+ maybeTree.childPendingWrites(true)
-		+ maybeTree.childPendingWrites(false)
+func fromModifiedTree(tree *Tree) *Link {
+	var pendingWrites uint8 = 1 +
+		tree.childPendingWrites(true) +
+		tree.childPendingWrites(false)
 
 	return &Link{
 		linkType: Modified,
-		childHeights: t.childHeights,
-		tree: maybeTree,
+		pendingWrites: pendingWrites,
+		childHeights: tree.childHeights(),
+		tree: tree,
 	}
-	
 }
 
 // func maybeFromModifiedTree(maybeTree *Tree) *Link {
@@ -50,36 +46,38 @@ func (l *Link) isStored() bool {
 	return l.linkType == Stored
 }
 
-func (l *Link) key() []byte {
-	switch l.linkType {
-	case Pruned:
-		return l.key
-	case Modified || Stored:
-		return l.tree.key()
-	default:
-		panic("link type dose not match")
-	}
-}
+// func (l *Link) key() []byte {
+// 	switch l.linkType {
+// 	case Pruned:
+// 		return l.key
+// 	case Modified || Stored:
+// 		return l.tree.key()
+// 	default:
+// 		panic("link type dose not match")
+// 	}
+// }
 
-func (l *Link) tree() *tree {
-	switch l.linkType {
-	case Pruned:
-		return nil
-	case Modified || Stored:
-		return l.tree
-	default:
-		panic("link type dose not match")
-	}
-}
+// func (l *Link) tree() *tree {
+// 	switch l.linkType {
+// 	case Pruned:
+// 		return nil
+// 	case Modified || Stored:
+// 		return l.tree
+// 	default:
+// 		panic("link type dose not match")
+// 	}
+// }
 
 func (l *Link) height() uint8 {
-	return 1+ max(l.childHeights[:])
+	return 1 + max(l.childHeights[:])
 }
 
 func (l *Link) balanceFactor() int8 {
-	return int8(l.childHeights[1]) - l.childHeights[0])
+	if l == nil {
+		return 0
+	}
+	return int8(l.childHeights[1] - l.childHeights[0])
 }
-
 
 func (l *Link) intoPruned() {
 	switch l.linkType {

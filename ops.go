@@ -3,6 +3,7 @@ package merk
 import (
 	"fmt"
 	"math"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type OpType uint8
@@ -14,34 +15,34 @@ const (
 
 type Op struct {
 	op  OpType
-	key byte[]
-	val byte[]
+	key []byte
+	val []byte
 }
 
 type Batch []*Op
 
-func applyTo(maybeTree *Tree, batch *Batch) (*Tree, [][]byte) {
+func applyTo(maybeTree *Tree, batch Batch) (*Tree, [][]byte) {
 	var deletedKeys [][]byte
 	if batch != nil && maybeTree != nil {
-		deletedKeys = apply(maybeTree, batch)
+		maybeTree, deletedKeys = apply(maybeTree, batch)
 	} else {
-		return build(), nil
+		return build(batch), nil
 	}
 
 	return maybeTree, deletedKeys
 }
 
-func build(batch *Batch) *Tree {
+func build(batch Batch) *Tree {
 	if batch == nil {
 		return nil
 	}
 
 	var midIndex int = len(batch) / 2
 	var midKey []byte = batch[midIndex].key
-	var midOp []byte = batch[midIndex].op
+	var midOp OpType = batch[midIndex].op
 	var midValue []byte = batch[midIndex].val
 	if midOp == Delete {
-		panic(fmt.Printf("Tried to delete non-existent key %v"), midKey)
+		panic(fmt.Sprintf("Tried to delete non-existent key %v", midKey))
 	}
 
 	midTree := newTree(midKey, midValue)
@@ -51,29 +52,29 @@ func build(batch *Batch) *Tree {
 }
 
 func apply(tree *Tree, batch Batch) (*Tree, [][]byte) {
-	found, mid := binarySearchBy(tee.key(), batch)
+	found, mid := binarySearchBy(tree.key(), batch)
 
 	if found {
-		tree.withValue(batch[mid])
+		tree.withValue(batch[mid].val)
 	}
 
 	var exclusive bool = found
 
-	recurse(tree, batch, mid, exclusive)
+	return recurse(tree, batch, mid, exclusive)
 }
 
-func recurse(tree *Tree, batch *Batch, mid int, exclusive bool) (*Tree, [][]byte) {
-	var leftBatch *Batch = batch[:mid]
-	var rightBatch *Batch
+func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte) {
+	var leftBatch Batch = batch[:mid]
+	var rightBatch Batch
 	if exclusive {
-		rightBatch = [mid + 1:]
+		rightBatch = batch[mid+1:]
 	} else {
-		rightBatch = [mid:]
+		rightBatch = batch[mid:]
 	}
 
 	var deletedKeys [][]byte
 
-	if leftBatch != nil {
+	if len(leftBatch) != 0 {
 		tree.walk(true, func(maybeLeft *Tree) *Tree {
 			maybeLeft, deletedKeysLeft := applyTo(maybeLeft, leftBatch)
 	 		deletedKeys	= append(deletedKeys, deletedKeysLeft...)
@@ -81,8 +82,8 @@ func recurse(tree *Tree, batch *Batch, mid int, exclusive bool) (*Tree, [][]byte
 		})
 	}
 
-	if rightBatch != nil {
-		tree.walk(true, func(maybeRight *Tree) *Tree {
+	if len(rightBatch) != 0 {
+		tree.walk(false, func(maybeRight *Tree) *Tree {
 			maybeRight, deletedKeysRight := applyTo(maybeRight, rightBatch)
 	 		deletedKeys	= append(deletedKeys, deletedKeysRight...)
 	 		return maybeRight
@@ -92,39 +93,53 @@ func recurse(tree *Tree, batch *Batch, mid int, exclusive bool) (*Tree, [][]byte
 	return maybeBalance(tree), deletedKeys
 }
 
-func balanceFactor(tree *Tree) uint8 {
+func balanceFactor(tree *Tree) int8 {
+	if tree == nil {
+		return 0
+	}
 	return tree.balanceFactor()
 }
 
 func maybeBalance(tree *Tree) *Tree {
-	var balanceFactor uint8 = balanceFactor(tree)
-	if math.Abs(balanceFactor) <= 1 {
+	var balance int8 = balanceFactor(tree)
+	if math.Abs(float64(balance)) <= 1 {
 		return tree
 	}
 
-	var isLeft bool = balanceFactor < 0
+	var isLeft bool = balance < 0
+	var childIsLeft bool = balanceFactor(tree.child(isLeft)) > 0
 
-	if isLeft == tree.link(isLeft).balanceFactor() > 0 {
-		tree.walkExpect(isLeft, func (child *Tree) *Tree{ return rotate(child, isLeft) })
+	if (isLeft && childIsLeft) || (!isLeft && !childIsLeft) {
+		spew.Dump("!")
+		tree.walkExpect(isLeft, func (child *Tree) *Tree{ return rotate(child, !isLeft) })
 	}
 
-	rotate(isLeft)
+	return rotate(tree, isLeft)
 }
 
-func rotate(tree *Tree, isLeft bool) (child *Tree) {
-	child = tree.detachExpect(isLeft)
-	var maybeGrandchild *Tree = child.detach(isLeft)
+func rotate(tree *Tree, isLeft bool) *Tree {
+	var (
+		err error
+		child *Tree
+		maybeGrandchild *Tree
+	)
 
-	err := tree.attach(isLeft, maybeGrandchild)
-	if err != nil {
-		fmt.Errorf("Fialed to attach grand child: %w", err)
+	child = tree.detachExpect(isLeft)
+	maybeGrandchild = child.detach(!isLeft)
+
+	if maybeGrandchild != nil {
+		err = tree.attach(isLeft, maybeGrandchild)
+		if err != nil {
+			fmt.Errorf("Fialed to attach grand child: %w", err)
+		}
 	}
 	tree = maybeBalance(tree)
 
-	err := child.attach(!isLeft, tree)
+	err = child.attach(!isLeft, tree)
 	if err != nil {
 		fmt.Errorf("Fialed to attach tree: %w", err)
 	}
+	child = maybeBalance(child)
 
-	return
+	return child
 }

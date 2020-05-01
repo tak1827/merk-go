@@ -10,6 +10,10 @@ type Merk struct {
   // path
 }
 
+func newMerk() *Merk {
+	return &Merk{}
+}
+
 func (m *Merk) get(key []byte) []byte {
 	if m.tree == nil {
 		return nil // empty tree
@@ -24,10 +28,10 @@ func (m *Merk) get(key []byte) []byte {
 		var isLeft bool = bytes.Compare(key, cursor.key()) == -1
 		var link *Link = cursor.link(isLeft)
 		if link == nil {
-			rerurn nil // not found
+			return nil // not found
 		}
 
-		var maybeChild *Tree = link.tree()
+		var maybeChild *Tree = link.tree
 		if maybeChild == nil {
 			break
 		}
@@ -40,24 +44,25 @@ func (m *Merk) get(key []byte) []byte {
 	return nil
 }
 
-func (m *Merk) apply(batch *Batch) {
+func (m *Merk) apply(batch Batch) {
 	// ensure keys in batch are sorted and unique
 	var prevKey []byte
-	for key, _ := range batch {
-		if bytes.Compare(key, prevKey) == -1 {
+	for i := 0; i < len(batch); i++ {
+		if bytes.Compare(batch[i].key, prevKey) == -1 {
 			panic("Keys in batch must be sorted")
-		} else if bytes.Equal(key, prevKey) {
+		} else if bytes.Equal(batch[i].key, prevKey) {
 			panic("Keys in batch must be unique")
 		}
 
-		prevKey = key
+		prevKey = batch[i].key
 	}
 
 	m.applyUnchecked(batch)
 }
 
-func (m *Merk) applyUnchecked(batch *Batch) {
-	m.tree, deletedKeys := applyTo(m.tree, batch)
+func (m *Merk) applyUnchecked(batch Batch) {
+	// var deletedKeys [][]bytes
+	m.tree, _ = applyTo(m.tree, batch)
 
 	// m.commit(deletedKeys)
 }

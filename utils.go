@@ -15,7 +15,7 @@ func max(a []uint8) uint8 {
   return max
 }
 
-func binarySearchBy(needle []byte, batch *Batch) (bool, int) {
+func binarySearchBy(needle []byte, batch Batch) (bool, int) {
   low := 0
   high := len(batch) - 1
   for low <= high {
@@ -31,5 +31,11 @@ func binarySearchBy(needle []byte, batch *Batch) (bool, int) {
     }
   }
 
-  return false, high
+  if high < 0 {
+    high = 0
+  } else if high > len(batch) - 1 {
+    high = len(batch) - 1
+  }
+
+  return false, low
 }

@@ -1,9 +1,5 @@
 package merk
 
-import (
-  
-)
-
 type KV struct {
 	key   []byte
 	value []byte

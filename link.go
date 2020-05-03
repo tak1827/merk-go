@@ -9,12 +9,12 @@ const (
 )
 
 type Link struct {
-	linkType LinkType
-	// hash
-	key []byte
-	childHeights [2]uint8 // [left, right]
+	linkType      LinkType
+	hash          Hash
+	key           []byte
+	childHeights  [2]uint8 // [left, right]
 	pendingWrites uint8
-	tree *Tree
+	tree          *Tree
 }
 
 func fromModifiedTree(tree *Tree) *Link {
@@ -30,10 +30,6 @@ func fromModifiedTree(tree *Tree) *Link {
 	}
 }
 
-// func maybeFromModifiedTree(maybeTree *Tree) *Link {
-// 	return fromModifiedTree(maybeTree)
-// }
-
 func (l *Link) isPruned() bool {
 	return l.linkType == Pruned
 }
@@ -46,23 +42,14 @@ func (l *Link) isStored() bool {
 	return l.linkType == Stored
 }
 
-// func (l *Link) key() []byte {
+// func (l *Link) hash() Hash {
 // 	switch l.linkType {
+// 	case Modified:
+// 		panic("Cannot get hash from modified link")
 // 	case Pruned:
-// 		return l.key
-// 	case Modified || Stored:
-// 		return l.tree.key()
-// 	default:
-// 		panic("link type dose not match")
-// 	}
-// }
-
-// func (l *Link) tree() *tree {
-// 	switch l.linkType {
-// 	case Pruned:
-// 		return nil
-// 	case Modified || Stored:
-// 		return l.tree
+// 		return l.hash
+// 	case Stored:
+// 		return l.hash
 // 	default:
 // 		panic("link type dose not match")
 // 	}

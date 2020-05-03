@@ -6,10 +6,12 @@ import (
 
 const HashSize = blake2b.Size256
 
+var NullHash []byte = []byte("0000000000000000000000000000000000000000000000000000000000000000")
+
 type Hash [HashSize]byte
 
-func kvHash(kv *KV) Hash {
-	return blake2b.Sum256(kv.Marshal())
+func kvHash(key, value []byte) Hash {
+	return blake2b.Sum256(serializeBytes(key, value))
 }
 
 func nodeHash(kv, left, right Hash) Hash {

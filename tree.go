@@ -18,12 +18,21 @@ func newTree(key, value []byte) *Tree {
 	}
 }
 
+func treeFromFields(key, value []byte, hash Hash, left, right *Link) *Tree {
+	kv := kvFromFields(key, value, hash)
+	return &Tree{kv, left, right}
+}
+
 func (t *Tree) key() []byte {
 	return t.kv.key
 }
 
 func (t *Tree) value() []byte {
 	return t.kv.value
+}
+
+func (t *Tree) kvHash() Hash {
+	return t.kv.hash
 }
 
 func (t *Tree) link(isLeft bool) *Link {
@@ -49,6 +58,24 @@ func (t *Tree) child(isLeft bool) *Tree {
 	}
 	return l.tree
 }
+
+func (t *Tree) childHash(isLeft bool) Hash {
+	l := t.link(isLeft)
+	if l.linkType == Modified {
+		panic("Cannot get hash from modified link")
+	}
+
+	if l.hash != nil {
+		return l.hash
+	} else {
+		return NullHash
+	}
+}
+
+func (t *Tree) hash(isLeft bool) Hash {
+	return nodeHash(t.kvHash(), t.childHash(true), t.childHash(false))
+}
+
 
 func (t *Tree) childPendingWrites(isLeft bool) uint8 {
 	var link *Link = t.link(isLeft)

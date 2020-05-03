@@ -44,6 +44,15 @@ func (m *Merk) get(key []byte) []byte {
 	return nil
 }
 
+func (m *Merk) rootHash() Hash {
+	hash = m.tree.hash()
+	if hash != nil {
+		return hash
+	} else {
+		return NullHash
+	}
+}
+
 func (m *Merk) apply(batch Batch) {
 	// ensure keys in batch are sorted and unique
 	var prevKey []byte

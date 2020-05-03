@@ -10,4 +10,6 @@ func newKV(key, value []byte) *KV {
 	return &KV{key, value}
 }
 
-
+func (kv *KV) Marshal() []byte {
+	return serializeBytes(kv.key, kv.value)
+}

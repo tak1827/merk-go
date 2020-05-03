@@ -18,6 +18,7 @@ func max(a []uint8) uint8 {
 func binarySearchBy(needle []byte, batch Batch) (bool, int) {
   low := 0
   high := len(batch) - 1
+
   for low <= high {
     median := (low + high) / 2
 
@@ -31,11 +32,13 @@ func binarySearchBy(needle []byte, batch Batch) (bool, int) {
     }
   }
 
-  if high < 0 {
-    high = 0
-  } else if high > len(batch) - 1 {
-    high = len(batch) - 1
+  return false, low
+}
+
+func serializeBytes(bs ...[]byte) (result []byte) {
+  for _, b := range bs {
+    result = append(result, b...)
   }
 
-  return false, low
+  return
 }

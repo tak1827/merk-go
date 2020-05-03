@@ -55,3 +55,12 @@ func TestBinarySearchBy(t *testing.T) {
 	assert.True(t, !isFound)
 	assert.EqualValues(t, index, 6)
 }
+
+func TestSerializeBytes(t *testing.T) {
+	byte1 := []byte("1")
+	byte2 := []byte("2")
+	byte3 := []byte("3")
+
+	assert.EqualValues(t, serializeBytes(byte1, byte2, byte3), []byte("123"))
+}
+

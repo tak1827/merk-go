@@ -83,6 +83,10 @@ func (t *Tree) balanceFactor() int8 {
 }
 
 func (t *Tree) attach(isLeft bool, maybeChild *Tree) error {
+	if t == nil || maybeChild == nil {
+		return nil
+	}
+
 	if bytes.Equal(maybeChild.key(), t.key()) {
 		return errors.New("Tried to attach tree with same key")
 	}
@@ -150,38 +154,6 @@ func (t *Tree) commit() {
 func (t *Tree) load() {
 	//
 }
-
-
-
-// func (t *Tree) print() {
-
-// 	type StockItem [2][]byte
-// 	type Stock []StockItem
-
-// 	 func traverse(cursor *Tree, stock Stock, isLeft bool) {
-
-// 		var childLink *Link = cursor.link(true)
-// 		if childLink != nil {
-// 			item := [2]byte{childLink.key, cursor.key()}
-// 			stock = append(stock, item)
-// 			var child *Tree = childLink.tree
-// 			if child != nil {
-// 				traverse(child, stock, true)
-// 			}
-// 		}
-
-// 		// Pop
-// 		stock = a[len(stock)-1]
-
-// 		var depth int = len(stock)
-
-// 		if depth > 0 {
-// 			for 
-
-// 		}
-// 	}
-
-// }
 
 func sideToStr(isLeft bool) string {
 	if isLeft {

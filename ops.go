@@ -25,6 +25,8 @@ func applyTo(maybeTree *Tree, batch Batch) (*Tree, [][]byte) {
 	var deletedKeys [][]byte
 	if batch != nil && maybeTree != nil {
 		maybeTree, deletedKeys = apply(maybeTree, batch)
+	} else if batch == nil {
+		// Do nothing
 	} else {
 		return build(batch), nil
 	}
@@ -52,10 +54,36 @@ func build(batch Batch) *Tree {
 }
 
 func apply(tree *Tree, batch Batch) (*Tree, [][]byte) {
+	var (
+		deletedKeys, deletedKeysRight [][]byte
+		leftBatch, rightBatch Batch
+	)
+
 	found, mid := binarySearchBy(tree.key(), batch)
 
 	if found {
-		tree.withValue(batch[mid].val)
+		switch batch[mid].op {
+		case Put:
+			tree.withValue(batch[mid].val)
+		case Delete:
+			maybeTree := remove(tree)
+
+			leftBatch = batch[:mid]
+			rightBatch = batch[mid+1:]
+
+			if len(leftBatch) != 0 {
+				maybeTree, deletedKeys = applyTo(maybeTree, leftBatch)
+			}
+			if len(rightBatch) != 0 {
+				maybeTree, deletedKeysRight = applyTo(maybeTree, rightBatch)
+				deletedKeys = append(deletedKeys, deletedKeysRight...)
+			}
+			deletedKeys = append(deletedKeys, tree.key())
+
+			return maybeTree, deletedKeys
+		default:
+			panic("Don't exist opcode")
+		}
 	}
 
 	var exclusive bool = found
@@ -77,6 +105,7 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte)
 	if len(leftBatch) != 0 {
 		tree.walk(true, func(maybeLeft *Tree) *Tree {
 			maybeLeft, deletedKeysLeft := applyTo(maybeLeft, leftBatch)
+
 	 		deletedKeys	= append(deletedKeys, deletedKeysLeft...)
 	 		return maybeLeft
 		})
@@ -142,4 +171,73 @@ func rotate(tree *Tree, isLeft bool) *Tree {
 	child = maybeBalance(child)
 
 	return child
+}
+
+func remove(tree *Tree) *Tree {
+	var (
+		hasLeft, hasRight, isLeft bool
+		maybeTree *Tree
+	)
+
+	if tree.link(true) != nil {
+		hasLeft = true
+	}
+	if tree.link(false) != nil {
+		hasRight = true
+	}
+	isLeft = tree.childHeight(true) > tree.childHeight(false)
+
+	if hasLeft && hasRight {
+    // two children, promote edge of taller child
+    tallChild := tree.detachExpect(isLeft) // 88
+    shortChild := tree.detachExpect(!isLeft) // 50
+    maybeTree = promoteEdge(tallChild, shortChild, !isLeft)
+  } else if hasLeft || hasRight {
+    // single child, promote it
+    maybeTree = tree.detachExpect(isLeft)
+  } else {
+  	// no child
+  }
+
+  return maybeTree
+}
+
+func promoteEdge(tree, attach *Tree, isLeft bool) *Tree {
+	var (
+		edge, maybeChild *Tree
+		err error
+	)
+
+	edge, maybeChild = removeEdge(tree, isLeft)
+
+	err = edge.attach(!isLeft, maybeChild)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = edge.attach(isLeft, attach)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return maybeBalance(edge)
+}
+
+func removeEdge(t *Tree, isLeft bool) (*Tree, *Tree)  {
+	var tree, edge, maybeChild *Tree
+
+	if t != nil && t.link(isLeft) != nil {
+		child := t.detachExpect(isLeft)
+		tree = t
+
+		edge, maybeChild = removeEdge(child, isLeft)
+
+		tree.attach(isLeft, maybeChild)
+		tree = maybeBalance(tree)
+
+		return edge, tree
+	} else {
+		tree = t.detach(!isLeft)
+		return t, tree
+	}
 }

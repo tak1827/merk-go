@@ -6,9 +6,7 @@ import (
 )
 
 func TestBuild(t *testing.T) {
-	var (
-		b Batch
-	)
+	var b Batch
 
 	op0 := &Op{Put, []byte("0"), []byte("value")}
 	op1 := &Op{Put, []byte("1"), []byte("value")}

@@ -65,14 +65,10 @@ func (t *Tree) childHash(isLeft bool) Hash {
 		panic("Cannot get hash from modified link")
 	}
 
-	if l.hash != nil {
-		return l.hash
-	} else {
-		return NullHash
-	}
+	return l.hash
 }
 
-func (t *Tree) hash(isLeft bool) Hash {
+func (t *Tree) hash() Hash {
 	return nodeHash(t.kvHash(), t.childHash(true), t.childHash(false))
 }
 

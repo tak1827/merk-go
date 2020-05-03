@@ -45,9 +45,8 @@ func (m *Merk) get(key []byte) []byte {
 }
 
 func (m *Merk) rootHash() Hash {
-	hash = m.tree.hash()
-	if hash != nil {
-		return hash
+	if m.tree != nil {
+		return m.tree.hash()
 	} else {
 		return NullHash
 	}

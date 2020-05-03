@@ -6,7 +6,7 @@ import (
 
 const HashSize = blake2b.Size256
 
-var NullHash []byte = []byte("0000000000000000000000000000000000000000000000000000000000000000")
+var NullHash Hash
 
 type Hash [HashSize]byte
 

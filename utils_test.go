@@ -63,4 +63,3 @@ func TestSerializeBytes(t *testing.T) {
 
 	assert.EqualValues(t, serializeBytes(byte1, byte2, byte3), []byte("123"))
 }
-

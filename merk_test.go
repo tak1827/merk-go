@@ -81,3 +81,35 @@ func TestApply(t *testing.T) {
 
 	// require.NoError(t, errors.New("Debug"))
 }
+
+func TestGet(t *testing.T) {
+	var batch1 Batch
+
+	m := newMerk()
+
+	/** Insert & Update Case **/
+	op0 := &Op{Put, []byte("0"), []byte("value0")}
+	op1 := &Op{Put, []byte("1"), []byte("value1")}
+	op2 := &Op{Put, []byte("2"), []byte("value2")}
+	op3 := &Op{Put, []byte("3"), []byte("value3")}
+	op4 := &Op{Put, []byte("4"), []byte("value4")}
+	op5 := &Op{Put, []byte("5"), []byte("value5")}
+	op6 := &Op{Put, []byte("6"), []byte("value6")}
+	op7 := &Op{Put, []byte("7"), []byte("value7")}
+	op8 := &Op{Put, []byte("8"), []byte("value8")}
+	op9 := &Op{Put, []byte("9"), []byte("value9")}
+
+	batch1 = append(batch1, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
+	m.apply(batch1)
+
+	require.EqualValues(t, []byte("value0"), m.get([]byte("0")))
+	require.EqualValues(t, []byte("value1"), m.get([]byte("1")))
+	require.EqualValues(t, []byte("value2"), m.get([]byte("2")))
+	require.EqualValues(t, []byte("value3"), m.get([]byte("3")))
+	require.EqualValues(t, []byte("value4"), m.get([]byte("4")))
+	require.EqualValues(t, []byte("value5"), m.get([]byte("5")))
+	require.EqualValues(t, []byte("value6"), m.get([]byte("6")))
+	require.EqualValues(t, []byte("value7"), m.get([]byte("7")))
+	require.EqualValues(t, []byte("value8"), m.get([]byte("8")))
+	require.EqualValues(t, []byte("value9"), m.get([]byte("9")))
+}

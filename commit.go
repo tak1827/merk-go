@@ -4,7 +4,10 @@ import (
 	"errors"
 	badger "github.com/dgraph-io/badger/v2"
 	"github.com/valyala/bytebufferpool"
+	"github.com/davecgh/go-spew/spew"
 )
+
+const DafaultLevels = 2
 
 type Commiter struct {
 	batch  *badger.WriteBatch
@@ -33,3 +36,11 @@ func (c *Commiter) write(tree *Tree) error {
 
 	return nil
 }
+
+func (c *Commiter) prune(tree *Tree) bool {
+	// keep N top levels of tree
+	spew.Dump("**********")
+	spew.Dump(c.height, tree.height())
+	return c.height - tree.height() >= c.levels
+}
+

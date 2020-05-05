@@ -5,13 +5,10 @@ import (
 	"testing"
 	"golang.org/x/crypto/blake2b"
 	"github.com/valyala/bytebufferpool"
-	"bytes"
 )
 
-func TestMarshalTree(t *testing.T) {
-	var (
-		leftLink, rightLink *Link
-	)
+func TestMarshal(t *testing.T) {
+	var leftLink, rightLink *Link
 
 	buf := bytebufferpool.Get()
 	defer bytebufferpool.Put(buf)
@@ -47,7 +44,7 @@ func TestUnMarshalTree(t *testing.T) {
 
 	hash := blake2b.Sum256([]byte(""))
 
-	tree, _ := unmarshalTree([]byte("key"), bytes.NewReader(data))
+	tree, _ := unmarshalTree([]byte("key"), data)
 
 	require.EqualValues(t, tree.key(), []byte("key"))
 	require.EqualValues(t, tree.value(), []byte("value"))
@@ -57,4 +54,56 @@ func TestUnMarshalTree(t *testing.T) {
 	require.EqualValues(t, tree.link(false).key, []byte("rKey"))
 	require.EqualValues(t, tree.link(false).hash, hash)
 	require.EqualValues(t, tree.link(false).childHeights, [2]uint8{2,0})
+}
+
+func TestCommit(t *testing.T) {
+	llTree := newTree([]byte("llKey"), []byte("llValue"))
+	lrTree := newTree([]byte("lrKey"), []byte("lrValue"))
+
+	llLink := &Link{
+		linkType: Modified,
+		pendingWrites: uint8(1),
+		childHeights: [2]uint8{0,0},
+		tree: llTree,
+	}
+
+	lrLink := &Link{
+		linkType: Modified,
+		pendingWrites: uint8(1),
+		childHeights: [2]uint8{0,0},
+		tree: lrTree,
+	}
+
+	lTree := newTree([]byte("lKey"), []byte("lValue"))
+	lTree.left = llLink
+	lTree.right = lrLink
+	rTree := newTree([]byte("rKey"), []byte("rValue"))
+
+	lLink := &Link{
+		linkType: Modified,
+		pendingWrites: uint8(2),
+		childHeights: [2]uint8{1,1},
+		tree: lTree,
+	}
+
+	rLink := &Link{
+		linkType: Stored,
+		hash: NullHash,
+		childHeights: [2]uint8{0,0},
+		tree: rTree,
+	}
+
+	tree := newTree([]byte("key"), []byte("value"))
+	tree.left = lLink
+	tree.right = rLink
+
+	committer := newCommitter(nil, tree.height(), 1)
+	tree.commit(committer)
+
+	require.EqualValues(t, tree.link(true).linkType, Stored)
+	require.EqualValues(t, tree.link(true).hash, lTree.hash())
+	require.EqualValues(t, tree.link(true).tree.link(true).linkType, Pruned)
+	require.EqualValues(t, tree.link(true).tree.link(false).linkType, Pruned)
+	require.EqualValues(t, tree.link(true).tree.link(true).key, llTree.key())
+	require.EqualValues(t, tree.link(true).tree.link(false).key, lrTree.key())
 }

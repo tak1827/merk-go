@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"github.com/valyala/bytebufferpool"
 	"bytes"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type LinkType uint8
@@ -17,9 +18,9 @@ const (
 )
 
 // Note: linkType have specific fields
-// Pruned   -> hash,           child_heights, key
-// Modified -> pending_writes, child_heights, tree
-// Stored   -> hash,           child_heights, tree
+// Pruned   -> hash,          childHeights, key
+// Modified -> pendingWrites, childHeights, tree
+// Stored   -> hash,          childHeights, tree
 type Link struct {
 	linkType      LinkType
 	hash          Hash
@@ -78,17 +79,19 @@ func (l *Link) balanceFactor() int8 {
 	return int8(l.childHeights[1] - l.childHeights[0])
 }
 
-func (l *Link) intoPruned() {
+func (l *Link) intoPruned() *Link {
 	switch l.linkType {
 	case Pruned:
-		return
+		return l
 	case Modified:
 		panic("Cannot prune Modified tree")
 	case Stored:
 		l.linkType = Pruned
 		l.key = l.tree.key()
 		l.tree = nil
-		return
+		spew.Dump("afdfdfdsfds")
+		spew.Dump(l)
+		return l
 	default:
 		panic("link type dose not match")
 	}

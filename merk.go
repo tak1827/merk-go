@@ -11,6 +11,7 @@ type Merk struct {
   path string
 }
 
+// Note: Keep merk single
 func newMerk(path string) (*Merk, error) {
 	badger, dbPath, err := openDB(path)
 	if err != nil {
@@ -31,22 +32,15 @@ func (m *Merk) get(key []byte) []byte {
 			return cursor.value()
 		}
 
-		var isLeft bool = bytes.Compare(key, cursor.key()) == -1
-		var link *Link = cursor.link(isLeft)
-		if link == nil {
-			return nil // not found
-		}
-
-		var maybeChild *Tree = link.tree
+		isLeft := bytes.Compare(key, cursor.key()) == -1
+		maybeChild := cursor.child(isLeft)
 		if maybeChild == nil {
-			break
+			break // not found
 		}
 
 		cursor = maybeChild
 	}
 
-	// TODO:
-	// fetch()
 	return nil
 }
 
@@ -86,14 +80,38 @@ func (m *Merk) destroy() error {
 	return err
 }
 
-// func (m *Merk) commit(deletedKeys [][]byte) error {
-// 	batch := m.db.NewWriteBatch()
-// 	defer batch.Cancel()
+func (m *Merk) commit(deletedKeys [][]byte) error {
+	batch := m.db.NewWriteBatch()
+	defer batch.Cancel()
 
-// 	for i := 0; i < N; i++ {
-// 	  err := wb.Set(key(i), value(i), 0) // Will create txns as needed.
-// 	  handle(err)
-// 	}
-// 	handle(wb.Flush()) // Wait for all txns to finish.
-// 	return nil
-// }
+	tree := m.tree
+	if tree != nil {
+		committer := newCommitter(batch, tree.height(), DafaultLevels)
+		if err := tree.commit(committer); err != nil {
+			return err
+		}
+
+		if err := batch.Set(RootKey, tree.key()); err != nil {
+			return err
+		}
+
+	} else {
+		// empty tree, delete root
+		if err := batch.Delete(RootKey); err != nil {
+			return err
+		}
+	}
+
+	for _, key := range deletedKeys {
+		if err := batch.Delete(key); err != nil {
+			return err
+		}
+	}
+
+	// write to db
+	if err := batch.Flush(); err != nil {
+		return err
+	}
+
+	return nil
+}

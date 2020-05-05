@@ -7,6 +7,7 @@ import (
 	"github.com/valyala/bytebufferpool"
 	"math"
 	"encoding/binary"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type Tree struct {
@@ -59,11 +60,24 @@ func (t *Tree) child(isLeft bool) *Tree {
 	if l == nil {
 		return nil
 	}
+
+	if l.linkType == Pruned {
+		if child, err := fetchTree(globalDB, l.key); err != nil {
+			panic(fmt.Sprintf("Failed to fetch node: %v", err))
+		} else {
+			return child
+		}
+	}
+
 	return l.tree
 }
 
 func (t *Tree) childHash(isLeft bool) Hash {
 	l := t.link(isLeft)
+	if l == nil {
+		return NullHash
+	}
+
 	if l.linkType == Modified {
 		panic("Cannot get hash from modified link")
 	}
@@ -86,9 +100,9 @@ func (t *Tree) childPendingWrites(isLeft bool) uint8 {
 }
 
 func (t *Tree) childHeight(isLeft bool) uint8 {
-	var tree *Tree = t.child(isLeft)
-	if tree != nil {
-		return tree.height()
+	var l *Link = t.link(isLeft)
+	if l != nil {
+		return l.height()
 	} else {
 		return 0
 	}
@@ -127,7 +141,7 @@ func (t *Tree) attach(isLeft bool, maybeChild *Tree) error {
 	return nil
 }
 
-func (t *Tree) detach(isLeft bool) (child *Tree) {
+func (t *Tree) detach(isLeft bool) *Tree {
 	var slot *Link = t.link(isLeft)
 	if slot == nil {
 		return nil
@@ -137,15 +151,17 @@ func (t *Tree) detach(isLeft bool) (child *Tree) {
 
 	switch slot.linkType {
 	case Pruned:
-		return
+		if child, err := fetchTree(globalDB, slot.key); err != nil {
+			panic(fmt.Sprintf("Failed to fetch node: %v", err))
+		} else {
+			return child
+		}
 	case Modified:
-		child = slot.tree
-		return
+		return slot.tree
 	case Stored:
-		child = slot.tree
-		return
+		return slot.tree
 	default:
-		return
+		return nil
 	}
 }
 
@@ -173,8 +189,47 @@ func (t *Tree) withValue(value []byte) {
 	t.kv.value = value
 }
 
-func (t *Tree) commit() {
-	//
+func (t *Tree) commit(c *Commiter) error {
+	left := t.link(true)
+	if left != nil && left.linkType == Modified {
+		left.tree.commit(c)
+		t.setLink(true, &Link{
+			linkType: Stored,
+			hash: left.tree.hash(),
+			tree: left.tree,
+			childHeights: left.childHeights,
+		})
+	}
+
+	right := t.link(false)
+	if right != nil && right.linkType == Modified {
+		right.tree.commit(c)
+		t.setLink(false, &Link{
+			linkType: Stored,
+			hash: right.tree.hash(),
+			tree: right.tree,
+			childHeights: right.childHeights,
+		})
+	}
+
+	if c.batch != nil {
+		if err := c.write(t); err != nil {
+			return err
+		}
+	}
+
+	if doPrune := c.prune(t); doPrune {
+		spew.Dump("&&&&&&&")
+		spew.Dump(t)
+		if t.link(true) != nil {
+			t.left = t.left.intoPruned()
+		}
+		if t.link(false) != nil {
+			t.right = t.right.intoPruned()
+		}
+	}
+
+	return nil
 }
 
 func (t *Tree) load() {
@@ -242,8 +297,10 @@ func (t *Tree) marshal(buf *bytebufferpool.ByteBuffer) error {
 	return nil
 }
 
-func unmarshalTree(key []byte, r *bytes.Reader) (*Tree, error) {
+func unmarshalTree(key, data []byte) (*Tree, error) {
 	var buf64 [8]byte
+
+	r := bytes.NewReader(data)
 
 	t := newTree(key, []byte(""))
 

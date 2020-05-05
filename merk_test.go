@@ -10,7 +10,8 @@ import (
 func TestApply(t *testing.T) {
 	var batch1, batch2, batch3, batch4, batch5, batch6 Batch
 
-	m := newMerk()
+	m, _ := newMerk("")
+	defer m.db.Close()
 
 	/** Insert & Update Case **/
 	op0 := &Op{Put, []byte("0"), []byte("value")}
@@ -85,7 +86,8 @@ func TestApply(t *testing.T) {
 func TestGet(t *testing.T) {
 	var batch1 Batch
 
-	m := newMerk()
+	m, _ := newMerk("")
+	defer m.db.Close()
 
 	/** Insert & Update Case **/
 	op0 := &Op{Put, []byte("0"), []byte("value0")}

@@ -2,16 +2,22 @@ package merk
 
 import (
 	"bytes"
+	badger "github.com/dgraph-io/badger/v2"
 )
 
 type Merk struct {
   tree *Tree
-  // db
-  // path
+  db   *badger.DB
+  path string
 }
 
-func newMerk() *Merk {
-	return &Merk{}
+func newMerk(path string) (*Merk, error) {
+	badger, dbPath, err := openDB(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Merk{db: badger, path: dbPath}, nil
 }
 
 func (m *Merk) get(key []byte) []byte {
@@ -74,3 +80,20 @@ func (m *Merk) applyUnchecked(batch Batch) {
 
 	// m.commit(deletedKeys)
 }
+
+func (m *Merk) destroy() error {
+	err := m.db.DropAll()
+	return err
+}
+
+// func (m *Merk) commit(deletedKeys [][]byte) error {
+// 	batch := m.db.NewWriteBatch()
+// 	defer batch.Cancel()
+
+// 	for i := 0; i < N; i++ {
+// 	  err := wb.Set(key(i), value(i), 0) // Will create txns as needed.
+// 	  handle(err)
+// 	}
+// 	handle(wb.Flush()) // Wait for all txns to finish.
+// 	return nil
+// }

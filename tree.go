@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"bytes"
 	"errors"
+	"github.com/valyala/bytebufferpool"
+	"math"
+	"encoding/binary"
 )
 
 type Tree struct {
@@ -184,4 +187,99 @@ func sideToStr(isLeft bool) string {
 	} else {
 		return "right"
 	}
+}
+
+func (t *Tree) marshal(buf *bytebufferpool.ByteBuffer) error {
+	var (
+		buf64 [8]byte
+		haveLeft, haveRight uint8
+	)
+
+	// Write kv value
+	if uint32(len(t.value())) > uint32(math.MaxUint32) {
+		return fmt.Errorf("Too long, t.value(): %v ", t.value())
+	}
+	binary.LittleEndian.PutUint32(buf64[:4], uint32(len(t.value())))
+	if _, err := buf.Write(buf64[:4]); err != nil {
+		return err
+	}
+	if _, err := buf.Write(t.value()); err != nil {
+		return err
+	}
+
+	// Write kv hash
+	hash := t.kvHash()
+	if _, err := buf.Write(hash[:]); err != nil {
+		return err
+	}
+
+	// Write left link
+	if t.link(true) != nil {
+		haveLeft = 1
+	}
+	if err := buf.WriteByte(byte(haveLeft)); err != nil {
+		return err
+	}
+	if haveLeft == 1 {
+		if err := t.link(true).marshal(buf); err != nil {
+			return err
+		}
+	}
+
+	// Write right link
+	if t.link(false) != nil {
+		haveRight = 1
+	}
+	if err := buf.WriteByte(byte(haveRight)); err != nil {
+		return err
+	}
+	if haveRight == 1 {
+		if err := t.link(false).marshal(buf); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func unmarshalTree(key []byte, r *bytes.Reader) (*Tree, error) {
+	var buf64 [8]byte
+
+	t := newTree(key, []byte(""))
+
+	t.kv.key = key
+
+	// Read value
+	if _, err := r.Read(buf64[:4]); err != nil {
+		return nil, err
+	}
+	t.kv.value = make([]byte, binary.LittleEndian.Uint32(buf64[:4]))
+	if _, err := r.Read(t.kv.value); err != nil {
+		return nil, err
+	}
+
+	// Read hash
+	if _, err := r.Read(t.kv.hash[:]); err != nil {
+		return nil, err
+	}
+
+	// Read left link
+	haveLeft, err := r.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+	if uint8(haveLeft) == 1 {
+		t.left, _ = unmarshalLink(r)
+	}
+
+	// Read left link
+	haveRight, err := r.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+	if uint8(haveRight) == 1 {
+		t.right, _ = unmarshalLink(r)
+	}
+
+	return t, nil
 }

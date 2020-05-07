@@ -2,6 +2,7 @@ package merk
 
 import (
 	"bytes"
+	"sort"
 )
 
 func max(a []uint8) uint8 {
@@ -41,4 +42,10 @@ func serializeBytes(bs ...[]byte) (result []byte) {
 	}
 
 	return
+}
+
+func sortBytes(data [][]byte) {
+	sort.SliceStable(data, func(i, j int) bool {
+		return string(data[i]) < string(data[j])
+	})
 }

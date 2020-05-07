@@ -4,11 +4,14 @@ import (
 	"errors"
 	"fmt"
 	badger "github.com/dgraph-io/badger/v2"
-	// "bytes"
+	"path/filepath"
 )
 
 // TOOD: Change to name
-const DefaultDBPath = "./merkdb"
+const (
+	DefaultDBPath = "../store/"
+	DefaultDBName = "merkdb"
+)
 
 type DB struct {
 	badger *badger.DB
@@ -20,9 +23,13 @@ var (
 	gDB     *DB
 )
 
-func defaultDBOpts(path string) badger.Options {
-	if path == "" {
-		path = DefaultDBPath
+func defaultDBOpts(name string) badger.Options {
+	var path string
+
+	if name != "" {
+		path = filepath.Dir(DefaultDBPath + name + "/")
+	} else {
+		path = filepath.Dir(DefaultDBPath + DefaultDBName + "/")
 	}
 
 	// See available options
@@ -30,12 +37,12 @@ func defaultDBOpts(path string) badger.Options {
 	return badger.DefaultOptions(path)
 }
 
-func openDB(path string) error {
+func openDB(name string) error {
 	if gDB != nil {
 		return errors.New("db already open")
 	}
 
-	ops := defaultDBOpts(path)
+	ops := defaultDBOpts(name)
 
 	db, err := badger.Open(ops)
 	if err != nil {

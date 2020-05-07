@@ -59,7 +59,8 @@ func TestApply(t *testing.T) {
 	batch4 = append(batch4, op11, op15, op16, op19)
 	delKeys4 := m.apply(batch4)
 
-	require.EqualValues(t, [][]byte{[]byte("1"), []byte("5"), []byte("9"), []byte("6")}, delKeys4)
+	// require.EqualValues(t, [][]byte{[]byte("1"), []byte("5"), []byte("9"), []byte("6")}, delKeys4)
+	require.EqualValues(t, [][]byte{[]byte("1"), []byte("5"), []byte("6"), []byte("9")}, delKeys4)
 
 	require.EqualValues(t, []byte("3"), m.tree.key())
 	require.EqualValues(t, []byte("2"), m.tree.child(true).key())
@@ -71,7 +72,8 @@ func TestApply(t *testing.T) {
 	batch5 = append(batch5, op12, op13, op17)
 	delKeys5 := m.apply(batch5)
 
-	require.EqualValues(t, [][]byte{[]byte("2"), []byte("7"), []byte("3")}, delKeys5)
+	// require.EqualValues(t, [][]byte{[]byte("2"), []byte("7"), []byte("3")}, delKeys5)
+	require.EqualValues(t, [][]byte{[]byte("2"), []byte("3"), []byte("7")}, delKeys5)
 
 	require.EqualValues(t, []byte("4"), m.tree.key())
 	require.EqualValues(t, []byte("0"), m.tree.child(true).key())
@@ -80,7 +82,8 @@ func TestApply(t *testing.T) {
 	batch6 = append(batch6, op10, op14, op18)
 	delKeys6 := m.apply(batch6)
 
-	require.EqualValues(t, [][]byte{[]byte("0"), []byte("8"), []byte("4")}, delKeys6)
+	// require.EqualValues(t, [][]byte{[]byte("0"), []byte("8"), []byte("4")}, delKeys6)
+	require.EqualValues(t, [][]byte{[]byte("0"), []byte("4"), []byte("8")}, delKeys6)
 
 	require.Nil(t, m.tree)
 }
@@ -175,7 +178,7 @@ func TestCommitDel(t *testing.T) {
 	batch = append(batch, op11, op15, op16, op19)
 	delKeys := m.apply(batch)
 
-	require.EqualValues(t, [][]byte{[]byte("key1"), []byte("key9"), []byte("key6"), []byte("key5")}, delKeys)
+	require.EqualValues(t, [][]byte{[]byte("key1"), []byte("key5"), []byte("key6"), []byte("key9")}, delKeys)
 
 	require.EqualValues(t, []byte("key4"), m.tree.key())
 	require.EqualValues(t, []byte("key2"), m.tree.child(true).key())

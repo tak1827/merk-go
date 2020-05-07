@@ -15,8 +15,8 @@ func newMerk() (*Merk, error) {
 }
 
 // Note: Keep merk single
-func newMarkWithDB(path string) (*Merk, error) {
-	if err := openDB(path); err != nil {
+func newMarkWithDB(name string) (*Merk, error) {
+	if err := openDB(name); err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
@@ -90,7 +90,7 @@ func (m *Merk) applyUnchecked(batch Batch) (deletedKeys [][]byte) {
 		m.commit(deletedKeys)
 	}
 
-	// TODO: Sort deletedKeys
+	sortBytes(deletedKeys)
 
 	return
 }

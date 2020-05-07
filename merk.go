@@ -69,7 +69,7 @@ func (m *Merk) rootHash() Hash {
 	}
 }
 
-func (m *Merk) apply(batch Batch) {
+func (m *Merk) apply(batch Batch) [][]byte {
 	// ensure keys in batch are sorted and unique
 	var prevKey []byte
 	for i := 0; i < len(batch); i++ {
@@ -82,16 +82,19 @@ func (m *Merk) apply(batch Batch) {
 		prevKey = batch[i].key
 	}
 
-	m.applyUnchecked(batch)
+	return m.applyUnchecked(batch)
 }
 
-func (m *Merk) applyUnchecked(batch Batch) {
-	var deletedKeys [][]byte
+func (m *Merk) applyUnchecked(batch Batch) (deletedKeys [][]byte){
 	m.tree, deletedKeys = applyTo(m.tree, batch)
 
 	if gDB != nil {
 		m.commit(deletedKeys)
 	}
+
+	// TODO: Sort deletedKeys
+
+	return
 }
 
 func (m *Merk) commit(deletedKeys [][]byte) error {

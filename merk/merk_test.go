@@ -33,16 +33,7 @@ func TestApply(t *testing.T) {
 	batch3 = append(batch3, op4, op5, op7, op9)
 	m.apply(batch3)
 
-	require.EqualValues(t, []byte("3"), m.tree.key())
-	require.EqualValues(t, []byte("1"), m.tree.child(true).key())
-	require.EqualValues(t, []byte("0"), m.tree.child(true).child(true).key())
-	require.EqualValues(t, []byte("2"), m.tree.child(true).child(false).key())
-	require.EqualValues(t, []byte("6"), m.tree.child(false).key())
-	require.EqualValues(t, []byte("5"), m.tree.child(false).child(true).key())
-	require.EqualValues(t, []byte("4"), m.tree.child(false).child(true).child(true).key())
-	require.EqualValues(t, []byte("8"), m.tree.child(false).child(false).key())
-	require.EqualValues(t, []byte("7"), m.tree.child(false).child(false).child(true).key())
-	require.EqualValues(t, []byte("9"), m.tree.child(false).child(false).child(false).key())
+	require.NoError(t, m.tree.verify())
 
 	/** Delete Case **/
 	op10 := &Op{op: Delete, key: []byte("0")}
@@ -59,32 +50,19 @@ func TestApply(t *testing.T) {
 	batch4 = append(batch4, op11, op15, op16, op19)
 	delKeys4 := m.apply(batch4)
 
-	// require.EqualValues(t, [][]byte{[]byte("1"), []byte("5"), []byte("9"), []byte("6")}, delKeys4)
 	require.EqualValues(t, [][]byte{[]byte("1"), []byte("5"), []byte("6"), []byte("9")}, delKeys4)
-
-	require.EqualValues(t, []byte("3"), m.tree.key())
-	require.EqualValues(t, []byte("2"), m.tree.child(true).key())
-	require.EqualValues(t, []byte("0"), m.tree.child(true).child(true).key())
-	require.EqualValues(t, []byte("7"), m.tree.child(false).key())
-	require.EqualValues(t, []byte("4"), m.tree.child(false).child(true).key())
-	require.EqualValues(t, []byte("8"), m.tree.child(false).child(false).key())
+	require.NoError(t, m.tree.verify())
 
 	batch5 = append(batch5, op12, op13, op17)
 	delKeys5 := m.apply(batch5)
 
-	// require.EqualValues(t, [][]byte{[]byte("2"), []byte("7"), []byte("3")}, delKeys5)
 	require.EqualValues(t, [][]byte{[]byte("2"), []byte("3"), []byte("7")}, delKeys5)
-
-	require.EqualValues(t, []byte("4"), m.tree.key())
-	require.EqualValues(t, []byte("0"), m.tree.child(true).key())
-	require.EqualValues(t, []byte("8"), m.tree.child(false).key())
+	require.NoError(t, m.tree.verify())
 
 	batch6 = append(batch6, op10, op14, op18)
 	delKeys6 := m.apply(batch6)
 
-	// require.EqualValues(t, [][]byte{[]byte("0"), []byte("8"), []byte("4")}, delKeys6)
 	require.EqualValues(t, [][]byte{[]byte("0"), []byte("4"), []byte("8")}, delKeys6)
-
 	require.Nil(t, m.tree)
 }
 
@@ -125,16 +103,10 @@ func TestCommit(t *testing.T) {
 	defer gDB.closeDB()
 	defer gDB.destroy()
 
-	require.EqualValues(t, []byte("key5"), m.tree.key())
-	require.EqualValues(t, []byte("key2"), m.tree.child(true).key())
-	require.EqualValues(t, []byte("key1"), m.tree.child(true).child(true).key())
+	require.NoError(t, m.tree.verify())
 	require.Nil(t, m.tree.child(true).child(true).link(true).tree)
-	require.EqualValues(t, []byte("key4"), m.tree.child(true).child(false).key())
 	require.Nil(t, m.tree.child(true).child(false).link(true).tree)
-	require.EqualValues(t, []byte("key8"), m.tree.child(false).key())
-	require.EqualValues(t, []byte("key7"), m.tree.child(false).child(true).key())
 	require.Nil(t, m.tree.child(false).child(true).link(true).tree)
-	require.EqualValues(t, []byte("key9"), m.tree.child(false).child(false).key())
 }
 
 func TestCommitFetchTree(t *testing.T) {
@@ -146,16 +118,7 @@ func TestCommitFetchTree(t *testing.T) {
 	defer gDB.closeDB()
 	defer gDB.destroy()
 
-	require.EqualValues(t, []byte("key5"), m.tree.key())
-	require.EqualValues(t, []byte("key2"), m.tree.child(true).key())
-	require.EqualValues(t, []byte("key1"), m.tree.child(true).child(true).key())
-	require.EqualValues(t, []byte("key0"), m.tree.child(true).child(true).child(true).key())
-	require.EqualValues(t, []byte("key4"), m.tree.child(true).child(false).key())
-	require.EqualValues(t, []byte("key3"), m.tree.child(true).child(false).child(true).key())
-	require.EqualValues(t, []byte("key8"), m.tree.child(false).key())
-	require.EqualValues(t, []byte("key7"), m.tree.child(false).child(true).key())
-	require.EqualValues(t, []byte("key6"), m.tree.child(false).child(true).child(true).key())
-	require.EqualValues(t, []byte("key9"), m.tree.child(false).child(false).key())
+	require.NoError(t, m.tree.verify())
 }
 
 func TestCommitDel(t *testing.T) {
@@ -164,28 +127,16 @@ func TestCommitDel(t *testing.T) {
 	defer gDB.closeDB()
 	defer gDB.destroy()
 
-	// op10 := &Op{op:Delete, key:[]byte("0")}
 	op11 := &Op{op: Delete, key: []byte("key1")}
-	// op12 := &Op{op:Delete, key:[]byte("2")}
-	// op13 := &Op{op:Delete, key:[]byte("3")}
-	// op14 := &Op{op:Delete, key:[]byte("4")}
 	op15 := &Op{op: Delete, key: []byte("key5")}
 	op16 := &Op{op: Delete, key: []byte("key6")}
-	// op17 := &Op{op:Delete, key:[]byte("7")}
-	// op18 := &Op{op:Delete, key:[]byte("8")}
 	op19 := &Op{op: Delete, key: []byte("key9")}
 
 	batch = append(batch, op11, op15, op16, op19)
 	delKeys := m.apply(batch)
 
 	require.EqualValues(t, [][]byte{[]byte("key1"), []byte("key5"), []byte("key6"), []byte("key9")}, delKeys)
-
-	require.EqualValues(t, []byte("key4"), m.tree.key())
-	require.EqualValues(t, []byte("key2"), m.tree.child(true).key())
-	require.EqualValues(t, []byte("key0"), m.tree.child(true).child(true).key())
-	require.EqualValues(t, []byte("key3"), m.tree.child(true).child(false).key())
-	require.EqualValues(t, []byte("key8"), m.tree.child(false).key())
-	require.EqualValues(t, []byte("key7"), m.tree.child(false).child(true).key())
+	require.NoError(t, m.tree.verify())
 }
 
 func buildMerkWithDB() *Merk {

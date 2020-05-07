@@ -53,8 +53,28 @@ func TestUnMarshalTree(t *testing.T) {
 }
 
 func TestTreeCommit(t *testing.T) {
-	llTree := newTree([]byte("llKey"), []byte("llValue"))
-	lrTree := newTree([]byte("lrKey"), []byte("lrValue"))
+	tree := buildTree()
+
+	committer := newCommitter(nil, tree.height(), 1)
+	tree.commit(committer)
+
+	require.EqualValues(t, tree.link(true).linkType, Stored)
+	require.EqualValues(t, tree.link(true).hash, Hash{0x4f, 0x85, 0x14, 0x8c, 0x5, 0x23, 0x93, 0xce, 0x97, 0xf1, 0x9, 0xdd, 0xc5, 0x49, 0x7b, 0x74, 0xf7, 0x41, 0x51, 0x2d, 0x5f, 0x3d, 0x6e, 0x95, 0x37, 0x4a, 0xf7, 0x75, 0x27, 0xff, 0x5d, 0x90})
+	require.EqualValues(t, tree.link(true).tree.link(true).linkType, Pruned)
+	require.EqualValues(t, tree.link(true).tree.link(false).linkType, Pruned)
+	require.EqualValues(t, tree.link(true).tree.link(true).key, []byte("key0"))
+	require.EqualValues(t, tree.link(true).tree.link(false).key, []byte("key2"))
+}
+
+func TestVerify(t *testing.T) {
+	tree := buildTree()
+
+	require.NoError(t, tree.verify())
+}
+
+func buildTree() *Tree {
+	llTree := newTree([]byte("key0"), []byte("value0"))
+	lrTree := newTree([]byte("key2"), []byte("value2"))
 
 	llLink := &Link{
 		linkType:      Modified,
@@ -70,10 +90,10 @@ func TestTreeCommit(t *testing.T) {
 		tree:          lrTree,
 	}
 
-	lTree := newTree([]byte("lKey"), []byte("lValue"))
+	lTree := newTree([]byte("key1"), []byte("value1"))
 	lTree.left = llLink
 	lTree.right = lrLink
-	rTree := newTree([]byte("rKey"), []byte("rValue"))
+	rTree := newTree([]byte("key4"), []byte("value4"))
 
 	lLink := &Link{
 		linkType:      Modified,
@@ -89,17 +109,9 @@ func TestTreeCommit(t *testing.T) {
 		tree:         rTree,
 	}
 
-	tree := newTree([]byte("key"), []byte("value"))
+	tree := newTree([]byte("key3"), []byte("value3"))
 	tree.left = lLink
 	tree.right = rLink
 
-	committer := newCommitter(nil, tree.height(), 1)
-	tree.commit(committer)
-
-	require.EqualValues(t, tree.link(true).linkType, Stored)
-	require.EqualValues(t, tree.link(true).hash, lTree.hash())
-	require.EqualValues(t, tree.link(true).tree.link(true).linkType, Pruned)
-	require.EqualValues(t, tree.link(true).tree.link(false).linkType, Pruned)
-	require.EqualValues(t, tree.link(true).tree.link(true).key, llTree.key())
-	require.EqualValues(t, tree.link(true).tree.link(false).key, lrTree.key())
+	return tree
 }

@@ -66,18 +66,18 @@ func (l *Link) isStored() bool {
 	return l.linkType == Stored
 }
 
-// func (l *Link) hash() Hash {
-// 	switch l.linkType {
-// 	case Modified:
-// 		panic("Cannot get hash from modified link")
-// 	case Pruned:
-// 		return l.hash
-// 	case Stored:
-// 		return l.hash
-// 	default:
-// 		panic("link type dose not match")
-// 	}
-// }
+func (l *Link) keyByType(lt LinkType) []byte {
+	switch lt {
+		case Pruned:
+		return l.key
+	case Modified:
+		return l.tree.key()
+	case Stored:
+		return l.tree.key()
+	default:
+		panic("link type dose not match")
+	}
+}
 
 func (l *Link) height() uint8 {
 	return 1 + max(l.childHeights[:])

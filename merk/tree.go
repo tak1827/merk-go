@@ -231,6 +231,34 @@ func (t *Tree) commit(c *Commiter) error {
 	return nil
 }
 
+func (t *Tree) verify() error {
+	var left *Link = t.link(true)
+	if left != nil {
+		if string(t.key()) <= string(left.keyByType(left.linkType)) {
+			return fmt.Errorf("unbalanced tree :%v", t.key())
+		}
+		if left.linkType == Modified || left.linkType == Stored {
+			if err := left.tree.verify(); err != nil {
+				return err
+			}
+		}
+	}
+
+	var right *Link = t.link(false)
+	if right != nil {
+		if string(t.key()) >= string(right.keyByType(right.linkType)) {
+			return fmt.Errorf("unbalanced tree :%v", t.key())
+		}
+		if right.linkType == Modified || right.linkType == Stored {
+			if err := right.tree.verify(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func sideToStr(isLeft bool) string {
 	if isLeft {
 		return "left"

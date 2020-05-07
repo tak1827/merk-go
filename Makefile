@@ -1,9 +1,9 @@
 install:
-	go get -v -d ./...
+	go get -v -d ./merk/.
 
 fmt:
-	go fmt ./...
-	go vet ./...
+	go fmt ./merk/
+	go vet ./merk/
 
 test:
-	go test ./...
+	go test ./merk/

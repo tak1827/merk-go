@@ -104,9 +104,12 @@ func TestCommit(t *testing.T) {
 	defer gDB.destroy()
 
 	require.NoError(t, m.tree.verify())
-	require.Nil(t, m.tree.child(true).child(true).link(true).tree)
-	require.Nil(t, m.tree.child(true).child(false).link(true).tree)
-	require.Nil(t, m.tree.child(false).child(true).link(true).tree)
+	require.EqualValues(t, PrunedLink, m.tree.child(true).child(true).link(true).linkType())
+	require.EqualValues(t, PrunedLink, m.tree.child(true).child(false).link(true).linkType())
+	require.EqualValues(t, PrunedLink, m.tree.child(false).child(true).link(true).linkType())
+	require.Nil(t, m.tree.child(true).child(true).link(true).tree())
+	require.Nil(t, m.tree.child(true).child(false).link(true).tree())
+	require.Nil(t, m.tree.child(false).child(true).link(true).tree())
 }
 
 func TestCommitFetchTree(t *testing.T) {

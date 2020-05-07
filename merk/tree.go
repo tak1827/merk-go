@@ -5,13 +5,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/valyala/bytebufferpool"
 	"math"
 )
 
 type Tree struct {
 	kv    *KV
-	left  *Link
-	right *Link
+	left  Link
+	right Link
 }
 
 func newTree(key, value []byte) *Tree {
@@ -20,7 +21,7 @@ func newTree(key, value []byte) *Tree {
 	}
 }
 
-func treeFromFields(key, value []byte, hash Hash, left, right *Link) *Tree {
+func treeFromFields(key, value []byte, hash Hash, left, right Link) *Tree {
 	kv := kvFromFields(key, value, hash)
 	return &Tree{kv, left, right}
 }
@@ -37,7 +38,7 @@ func (t *Tree) kvHash() Hash {
 	return t.kv.hash
 }
 
-func (t *Tree) link(isLeft bool) *Link {
+func (t *Tree) link(isLeft bool) Link {
 	if isLeft {
 		return t.left
 	} else {
@@ -45,7 +46,7 @@ func (t *Tree) link(isLeft bool) *Link {
 	}
 }
 
-func (t *Tree) setLink(isLeft bool, link *Link) {
+func (t *Tree) setLink(isLeft bool, link Link) {
 	if isLeft {
 		t.left = link
 	} else {
@@ -54,50 +55,37 @@ func (t *Tree) setLink(isLeft bool, link *Link) {
 }
 
 func (t *Tree) child(isLeft bool) *Tree {
-	var l *Link = t.link(isLeft)
+	var l Link = t.link(isLeft)
 	if l == nil {
 		return nil
 	}
 
-	if l.linkType == Pruned {
-		if child, err := gDB.fetchTree(l.key); err != nil {
+	if l.linkType() == PrunedLink {
+		child, err := gDB.fetchTree(l.key())
+		if err != nil {
 			panic(fmt.Sprintf("failed to fetch node: %v", err))
-		} else {
-			return child
 		}
+		return child
 	}
 
-	return l.tree
+	return l.tree()
 }
 
 func (t *Tree) childHash(isLeft bool) Hash {
-	l := t.link(isLeft)
+	var l Link = t.link(isLeft)
 	if l == nil {
 		return NullHash
 	}
 
-	if l.linkType == Modified {
-		panic("Cannot get hash from modified link")
-	}
-
-	return l.hash
+	return l.hash()
 }
 
 func (t *Tree) hash() Hash {
 	return nodeHash(t.kvHash(), t.childHash(true), t.childHash(false))
 }
 
-func (t *Tree) childPendingWrites(isLeft bool) uint8 {
-	var link *Link = t.link(isLeft)
-	if link != nil && link.linkType == Modified {
-		return link.pendingWrites
-	} else {
-		return 0
-	}
-}
-
 func (t *Tree) childHeight(isLeft bool) uint8 {
-	var l *Link = t.link(isLeft)
+	var l Link = t.link(isLeft)
 	if l != nil {
 		return l.height()
 	} else {
@@ -139,27 +127,22 @@ func (t *Tree) attach(isLeft bool, maybeChild *Tree) error {
 }
 
 func (t *Tree) detach(isLeft bool) *Tree {
-	var slot *Link = t.link(isLeft)
+	var slot Link = t.link(isLeft)
 	if slot == nil {
 		return nil
 	}
 
 	t.setLink(isLeft, nil)
 
-	switch slot.linkType {
-	case Pruned:
-		if child, err := gDB.fetchTree(slot.key); err != nil {
+	if slot.linkType() == PrunedLink {
+		child, err := gDB.fetchTree(slot.key())
+		if err != nil {
 			panic(fmt.Sprintf("Failed to fetch node: %v", err))
-		} else {
-			return child
 		}
-	case Modified:
-		return slot.tree
-	case Stored:
-		return slot.tree
-	default:
-		return nil
+		return child
 	}
+
+	return slot.tree()
 }
 
 func (t *Tree) detachExpect(isLeft bool) (maybeChild *Tree) {
@@ -187,29 +170,27 @@ func (t *Tree) withValue(value []byte) {
 }
 
 func (t *Tree) commit(c *Commiter) error {
-	left := t.link(true)
-	if left != nil && left.linkType == Modified {
-		if err := left.tree.commit(c); err != nil {
+	var left Link = t.link(true)
+	if left != nil && left.linkType() == ModifiedLink {
+		if err := left.tree().commit(c); err != nil {
 			return err
 		}
-		t.setLink(true, &Link{
-			linkType:     Stored,
-			hash:         left.tree.hash(),
-			tree:         left.tree,
-			childHeights: left.childHeights,
+		t.setLink(true, &Stored{
+			ch: left.childHeights(),
+			t:  left.tree(),
+			h:  left.tree().hash(),
 		})
 	}
 
-	right := t.link(false)
-	if right != nil && right.linkType == Modified {
-		if err := right.tree.commit(c); err != nil {
+	var right Link = t.link(false)
+	if right != nil && right.linkType() == ModifiedLink {
+		if err := right.tree().commit(c); err != nil {
 			return err
 		}
-		t.setLink(false, &Link{
-			linkType:     Stored,
-			hash:         right.tree.hash(),
-			tree:         right.tree,
-			childHeights: right.childHeights,
+		t.setLink(false, &Stored{
+			ch: right.childHeights(),
+			t:  right.tree(),
+			h:  right.tree().hash(),
 		})
 	}
 
@@ -232,25 +213,25 @@ func (t *Tree) commit(c *Commiter) error {
 }
 
 func (t *Tree) verify() error {
-	var left *Link = t.link(true)
+	var left Link = t.link(true)
 	if left != nil {
-		if string(t.key()) <= string(left.keyByType(left.linkType)) {
+		if string(t.key()) <= string(left.key()) {
 			return fmt.Errorf("unbalanced tree :%v", t.key())
 		}
-		if left.linkType == Modified || left.linkType == Stored {
-			if err := left.tree.verify(); err != nil {
+		if left.linkType() != PrunedLink {
+			if err := left.tree().verify(); err != nil {
 				return err
 			}
 		}
 	}
 
-	var right *Link = t.link(false)
+	var right Link = t.link(false)
 	if right != nil {
-		if string(t.key()) >= string(right.keyByType(right.linkType)) {
+		if string(t.key()) >= string(right.key()) {
 			return fmt.Errorf("unbalanced tree :%v", t.key())
 		}
-		if right.linkType == Modified || right.linkType == Stored {
-			if err := right.tree.verify(); err != nil {
+		if right.linkType() != PrunedLink {
+			if err := right.tree().verify(); err != nil {
 				return err
 			}
 		}
@@ -259,21 +240,14 @@ func (t *Tree) verify() error {
 	return nil
 }
 
-func sideToStr(isLeft bool) string {
-	if isLeft {
-		return "left"
-	} else {
-		return "right"
-	}
-}
-
 func (t *Tree) marshal() ([]byte, error) {
 	var (
 		buf64               [8]byte
 		haveLeft, haveRight uint8
 	)
 
-	buf := bytes.NewBuffer(nil)
+	buf := bytebufferpool.Get()
+	defer bytebufferpool.Put(buf)
 
 	// Write kv value
 	if uint32(len(t.value())) > uint32(math.MaxUint32) {
@@ -301,11 +275,7 @@ func (t *Tree) marshal() ([]byte, error) {
 		return nil, err
 	}
 	if haveLeft == 1 {
-		b, err := t.link(true).marshal()
-		if err != nil {
-			return nil, err
-		}
-		if _, err = buf.Write(b); err != nil {
+		if err := t.link(true).marshal(buf); err != nil {
 			return nil, err
 		}
 	}
@@ -318,16 +288,12 @@ func (t *Tree) marshal() ([]byte, error) {
 		return nil, err
 	}
 	if haveRight == 1 {
-		b, err := t.link(false).marshal()
-		if err != nil {
-			return nil, err
-		}
-		if _, err = buf.Write(b); err != nil {
+		if err := t.link(false).marshal(buf); err != nil {
 			return nil, err
 		}
 	}
 
-	return buf.Bytes(), nil
+	return append(make([]byte, 0), buf.Bytes()...), nil
 }
 
 func unmarshalTree(key, data []byte) (*Tree, error) {
@@ -359,7 +325,7 @@ func unmarshalTree(key, data []byte) (*Tree, error) {
 		return nil, err
 	}
 	if uint8(haveLeft) == 1 {
-		t.left, _ = unmarshalLink(r)
+		t.left, _ = unmarshalPruned(r)
 	}
 
 	// Read left link
@@ -368,8 +334,16 @@ func unmarshalTree(key, data []byte) (*Tree, error) {
 		return nil, err
 	}
 	if uint8(haveRight) == 1 {
-		t.right, _ = unmarshalLink(r)
+		t.right, _ = unmarshalPruned(r)
 	}
 
 	return t, nil
+}
+
+func sideToStr(isLeft bool) string {
+	if isLeft {
+		return "left"
+	} else {
+		return "right"
+	}
 }

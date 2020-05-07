@@ -118,18 +118,18 @@ func (db *DB) fetchTrees(key []byte) (*Tree, error) {
 		return nil, err
 	}
 
-	var leftLink *Link = tree.link(true)
+	var leftLink Link = tree.link(true)
 	if leftLink != nil {
-		leftTree, err := db.fetchTrees(leftLink.key)
+		leftTree, err := db.fetchTrees(leftLink.key())
 		if err != nil {
 			return nil, err
 		}
 		leftLink = leftLink.intoStored(leftTree)
 	}
 
-	var rightLink *Link = tree.link(false)
+	var rightLink Link = tree.link(false)
 	if rightLink != nil {
-		rightTree, err := db.fetchTrees(rightLink.key)
+		rightTree, err := db.fetchTrees(rightLink.key())
 		if err != nil {
 			return nil, err
 		}

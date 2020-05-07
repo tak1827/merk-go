@@ -7,23 +7,21 @@ import (
 )
 
 func TestMarshal(t *testing.T) {
-	var leftLink, rightLink *Link
+	var leftLink, rightLink Link
 
 	hash := blake2b.Sum256([]byte(""))
 	rTree := newTree([]byte("rKey"), []byte("rValue"))
 
-	leftLink = &Link{
-		linkType:     Pruned,
-		hash:         hash,
-		key:          []byte("key"),
-		childHeights: [2]uint8{1, 2},
+	leftLink = &Pruned{
+		ch: [2]uint8{1, 2},
+		k:  []byte("key"),
+		h:  hash,
 	}
 
-	rightLink = &Link{
-		linkType:     Stored,
-		hash:         hash,
-		childHeights: [2]uint8{2, 0},
-		tree:         rTree,
+	rightLink = &Stored{
+		ch: [2]uint8{2, 0},
+		t:  rTree,
+		h:  hash,
 	}
 
 	tree := newTree([]byte("key"), []byte("value"))
@@ -44,12 +42,12 @@ func TestUnMarshalTree(t *testing.T) {
 
 	require.EqualValues(t, tree.key(), []byte("key"))
 	require.EqualValues(t, tree.value(), []byte("value"))
-	require.EqualValues(t, tree.link(true).key, []byte("key"))
-	require.EqualValues(t, tree.link(true).hash, hash)
-	require.EqualValues(t, tree.link(true).childHeights, [2]uint8{1, 2})
-	require.EqualValues(t, tree.link(false).key, []byte("rKey"))
-	require.EqualValues(t, tree.link(false).hash, hash)
-	require.EqualValues(t, tree.link(false).childHeights, [2]uint8{2, 0})
+	require.EqualValues(t, tree.link(true).key(), []byte("key"))
+	require.EqualValues(t, tree.link(true).hash(), hash)
+	require.EqualValues(t, tree.link(true).childHeights(), [2]uint8{1, 2})
+	require.EqualValues(t, tree.link(false).key(), []byte("rKey"))
+	require.EqualValues(t, tree.link(false).hash(), hash)
+	require.EqualValues(t, tree.link(false).childHeights(), [2]uint8{2, 0})
 }
 
 func TestTreeCommit(t *testing.T) {
@@ -58,12 +56,12 @@ func TestTreeCommit(t *testing.T) {
 	committer := newCommitter(nil, tree.height(), 1)
 	tree.commit(committer)
 
-	require.EqualValues(t, tree.link(true).linkType, Stored)
-	require.EqualValues(t, tree.link(true).hash, Hash{0x4f, 0x85, 0x14, 0x8c, 0x5, 0x23, 0x93, 0xce, 0x97, 0xf1, 0x9, 0xdd, 0xc5, 0x49, 0x7b, 0x74, 0xf7, 0x41, 0x51, 0x2d, 0x5f, 0x3d, 0x6e, 0x95, 0x37, 0x4a, 0xf7, 0x75, 0x27, 0xff, 0x5d, 0x90})
-	require.EqualValues(t, tree.link(true).tree.link(true).linkType, Pruned)
-	require.EqualValues(t, tree.link(true).tree.link(false).linkType, Pruned)
-	require.EqualValues(t, tree.link(true).tree.link(true).key, []byte("key0"))
-	require.EqualValues(t, tree.link(true).tree.link(false).key, []byte("key2"))
+	require.EqualValues(t, tree.link(true).linkType(), StoredLink)
+	require.EqualValues(t, tree.link(true).hash(), Hash{0x4f, 0x85, 0x14, 0x8c, 0x5, 0x23, 0x93, 0xce, 0x97, 0xf1, 0x9, 0xdd, 0xc5, 0x49, 0x7b, 0x74, 0xf7, 0x41, 0x51, 0x2d, 0x5f, 0x3d, 0x6e, 0x95, 0x37, 0x4a, 0xf7, 0x75, 0x27, 0xff, 0x5d, 0x90})
+	require.EqualValues(t, tree.link(true).tree().link(true).linkType(), PrunedLink)
+	require.EqualValues(t, tree.link(true).tree().link(false).linkType(), PrunedLink)
+	require.EqualValues(t, tree.link(true).tree().link(true).key(), []byte("key0"))
+	require.EqualValues(t, tree.link(true).tree().link(false).key(), []byte("key2"))
 }
 
 func TestVerify(t *testing.T) {
@@ -76,18 +74,14 @@ func buildTree() *Tree {
 	llTree := newTree([]byte("key0"), []byte("value0"))
 	lrTree := newTree([]byte("key2"), []byte("value2"))
 
-	llLink := &Link{
-		linkType:      Modified,
-		pendingWrites: uint8(1),
-		childHeights:  [2]uint8{0, 0},
-		tree:          llTree,
+	llLink := &Modified{
+		ch: [2]uint8{0, 0},
+		t:  llTree,
 	}
 
-	lrLink := &Link{
-		linkType:      Modified,
-		pendingWrites: uint8(1),
-		childHeights:  [2]uint8{0, 0},
-		tree:          lrTree,
+	lrLink := &Modified{
+		ch: [2]uint8{0, 0},
+		t:  lrTree,
 	}
 
 	lTree := newTree([]byte("key1"), []byte("value1"))
@@ -95,18 +89,15 @@ func buildTree() *Tree {
 	lTree.right = lrLink
 	rTree := newTree([]byte("key4"), []byte("value4"))
 
-	lLink := &Link{
-		linkType:      Modified,
-		pendingWrites: uint8(2),
-		childHeights:  [2]uint8{1, 1},
-		tree:          lTree,
+	lLink := &Modified{
+		ch: [2]uint8{1, 1},
+		t:  lTree,
 	}
 
-	rLink := &Link{
-		linkType:     Stored,
-		hash:         NullHash,
-		childHeights: [2]uint8{0, 0},
-		tree:         rTree,
+	rLink := &Stored{
+		ch: [2]uint8{0, 0},
+		t:  rTree,
+		h:  NullHash,
 	}
 
 	tree := newTree([]byte("key3"), []byte("value3"))

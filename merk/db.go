@@ -9,7 +9,7 @@ import (
 
 // TOOD: Change to name
 const (
-	DefaultDBPath = "../store/"
+	DefaultDBPath = "../storage/"
 	DefaultDBName = "merkdb"
 )
 

@@ -1,4 +1,4 @@
-module github.com/tak1827/merk-go.git
+module github.com/tak1827/merk-go/merk
 
 go 1.14
 

@@ -36,6 +36,5 @@ func (c *Commiter) write(tree *Tree) error {
 }
 
 func (c *Commiter) prune(tree *Tree) bool {
-	return c.height - tree.height() >= c.levels
+	return c.height-tree.height() >= c.levels
 }
-

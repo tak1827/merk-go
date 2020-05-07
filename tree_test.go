@@ -2,8 +2,8 @@ package merk
 
 import (
 	"github.com/stretchr/testify/require"
-	"testing"
 	"golang.org/x/crypto/blake2b"
+	"testing"
 )
 
 func TestMarshal(t *testing.T) {
@@ -13,17 +13,17 @@ func TestMarshal(t *testing.T) {
 	rTree := newTree([]byte("rKey"), []byte("rValue"))
 
 	leftLink = &Link{
-		linkType: Pruned,
-		hash: hash,
-		key: []byte("key"),
-		childHeights: [2]uint8{1,2},
+		linkType:     Pruned,
+		hash:         hash,
+		key:          []byte("key"),
+		childHeights: [2]uint8{1, 2},
 	}
 
 	rightLink = &Link{
-		linkType: Stored,
-		hash: hash,
-		childHeights: [2]uint8{2,0},
-		tree: rTree,
+		linkType:     Stored,
+		hash:         hash,
+		childHeights: [2]uint8{2, 0},
+		tree:         rTree,
 	}
 
 	tree := newTree([]byte("key"), []byte("value"))
@@ -46,10 +46,10 @@ func TestUnMarshalTree(t *testing.T) {
 	require.EqualValues(t, tree.value(), []byte("value"))
 	require.EqualValues(t, tree.link(true).key, []byte("key"))
 	require.EqualValues(t, tree.link(true).hash, hash)
-	require.EqualValues(t, tree.link(true).childHeights, [2]uint8{1,2})
+	require.EqualValues(t, tree.link(true).childHeights, [2]uint8{1, 2})
 	require.EqualValues(t, tree.link(false).key, []byte("rKey"))
 	require.EqualValues(t, tree.link(false).hash, hash)
-	require.EqualValues(t, tree.link(false).childHeights, [2]uint8{2,0})
+	require.EqualValues(t, tree.link(false).childHeights, [2]uint8{2, 0})
 }
 
 func TestTreeCommit(t *testing.T) {
@@ -57,17 +57,17 @@ func TestTreeCommit(t *testing.T) {
 	lrTree := newTree([]byte("lrKey"), []byte("lrValue"))
 
 	llLink := &Link{
-		linkType: Modified,
+		linkType:      Modified,
 		pendingWrites: uint8(1),
-		childHeights: [2]uint8{0,0},
-		tree: llTree,
+		childHeights:  [2]uint8{0, 0},
+		tree:          llTree,
 	}
 
 	lrLink := &Link{
-		linkType: Modified,
+		linkType:      Modified,
 		pendingWrites: uint8(1),
-		childHeights: [2]uint8{0,0},
-		tree: lrTree,
+		childHeights:  [2]uint8{0, 0},
+		tree:          lrTree,
 	}
 
 	lTree := newTree([]byte("lKey"), []byte("lValue"))
@@ -76,17 +76,17 @@ func TestTreeCommit(t *testing.T) {
 	rTree := newTree([]byte("rKey"), []byte("rValue"))
 
 	lLink := &Link{
-		linkType: Modified,
+		linkType:      Modified,
 		pendingWrites: uint8(2),
-		childHeights: [2]uint8{1,1},
-		tree: lTree,
+		childHeights:  [2]uint8{1, 1},
+		tree:          lTree,
 	}
 
 	rLink := &Link{
-		linkType: Stored,
-		hash: NullHash,
-		childHeights: [2]uint8{0,0},
-		tree: rTree,
+		linkType:     Stored,
+		hash:         NullHash,
+		childHeights: [2]uint8{0, 0},
+		tree:         rTree,
 	}
 
 	tree := newTree([]byte("key"), []byte("value"))

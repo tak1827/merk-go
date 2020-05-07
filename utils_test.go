@@ -14,7 +14,7 @@ func TestMax(t *testing.T) {
 func TestBinarySearchBy(t *testing.T) {
 	var (
 		isFound bool
-		index int
+		index   int
 	)
 
 	op0 := &Op{Put, []byte("0"), []byte("value")}

@@ -1,8 +1,8 @@
 package merk
 
 import (
-	"testing"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 const testDBName string = "testdb"
@@ -44,18 +44,17 @@ func TestApply(t *testing.T) {
 	require.EqualValues(t, []byte("7"), m.tree.child(false).child(false).child(true).key())
 	require.EqualValues(t, []byte("9"), m.tree.child(false).child(false).child(false).key())
 
-
 	/** Delete Case **/
-	op10 := &Op{op:Delete, key:[]byte("0")}
-	op11 := &Op{op:Delete, key:[]byte("1")}
-	op12 := &Op{op:Delete, key:[]byte("2")}
-	op13 := &Op{op:Delete, key:[]byte("3")}
-	op14 := &Op{op:Delete, key:[]byte("4")}
-	op15 := &Op{op:Delete, key:[]byte("5")}
-	op16 := &Op{op:Delete, key:[]byte("6")}
-	op17 := &Op{op:Delete, key:[]byte("7")}
-	op18 := &Op{op:Delete, key:[]byte("8")}
-	op19 := &Op{op:Delete, key:[]byte("9")}
+	op10 := &Op{op: Delete, key: []byte("0")}
+	op11 := &Op{op: Delete, key: []byte("1")}
+	op12 := &Op{op: Delete, key: []byte("2")}
+	op13 := &Op{op: Delete, key: []byte("3")}
+	op14 := &Op{op: Delete, key: []byte("4")}
+	op15 := &Op{op: Delete, key: []byte("5")}
+	op16 := &Op{op: Delete, key: []byte("6")}
+	op17 := &Op{op: Delete, key: []byte("7")}
+	op18 := &Op{op: Delete, key: []byte("8")}
+	op19 := &Op{op: Delete, key: []byte("9")}
 
 	batch4 = append(batch4, op11, op15, op16, op19)
 	delKeys4 := m.apply(batch4)
@@ -126,12 +125,12 @@ func TestCommit(t *testing.T) {
 	require.EqualValues(t, []byte("key5"), m.tree.key())
 	require.EqualValues(t, []byte("key2"), m.tree.child(true).key())
 	require.EqualValues(t, []byte("key1"), m.tree.child(true).child(true).key())
-	require.Nil(t,                         m.tree.child(true).child(true).link(true).tree)
+	require.Nil(t, m.tree.child(true).child(true).link(true).tree)
 	require.EqualValues(t, []byte("key4"), m.tree.child(true).child(false).key())
-	require.Nil(t,                         m.tree.child(true).child(false).link(true).tree)
+	require.Nil(t, m.tree.child(true).child(false).link(true).tree)
 	require.EqualValues(t, []byte("key8"), m.tree.child(false).key())
 	require.EqualValues(t, []byte("key7"), m.tree.child(false).child(true).key())
-	require.Nil(t,                         m.tree.child(false).child(true).link(true).tree)
+	require.Nil(t, m.tree.child(false).child(true).link(true).tree)
 	require.EqualValues(t, []byte("key9"), m.tree.child(false).child(false).key())
 }
 
@@ -163,15 +162,15 @@ func TestCommitDel(t *testing.T) {
 	defer gDB.destroy()
 
 	// op10 := &Op{op:Delete, key:[]byte("0")}
-	op11 := &Op{op:Delete, key:[]byte("key1")}
+	op11 := &Op{op: Delete, key: []byte("key1")}
 	// op12 := &Op{op:Delete, key:[]byte("2")}
 	// op13 := &Op{op:Delete, key:[]byte("3")}
 	// op14 := &Op{op:Delete, key:[]byte("4")}
-	op15 := &Op{op:Delete, key:[]byte("key5")}
-	op16 := &Op{op:Delete, key:[]byte("key6")}
+	op15 := &Op{op: Delete, key: []byte("key5")}
+	op16 := &Op{op: Delete, key: []byte("key6")}
 	// op17 := &Op{op:Delete, key:[]byte("7")}
 	// op18 := &Op{op:Delete, key:[]byte("8")}
-	op19 := &Op{op:Delete, key:[]byte("key9")}
+	op19 := &Op{op: Delete, key: []byte("key9")}
 
 	batch = append(batch, op11, op15, op16, op19)
 	delKeys := m.apply(batch)

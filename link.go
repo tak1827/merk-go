@@ -1,10 +1,10 @@
 package merk
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math"
-	"encoding/binary"
-	"bytes"
 )
 
 type LinkType uint8
@@ -16,16 +16,16 @@ const (
 )
 
 func (l LinkType) String() string {
-  switch l {
-  case Pruned:
-      return "Pruned"
-  case Modified:
-      return "Modified"
-  case Stored:
-      return "Stored"
-  default:
-      return "Unknown"
-  }
+	switch l {
+	case Pruned:
+		return "Pruned"
+	case Modified:
+		return "Modified"
+	case Stored:
+		return "Stored"
+	default:
+		return "Unknown"
+	}
 }
 
 // Note: linkType have specific fields
@@ -47,10 +47,10 @@ func fromModifiedTree(tree *Tree) *Link {
 		tree.childPendingWrites(false)
 
 	return &Link{
-		linkType: Modified,
+		linkType:      Modified,
 		pendingWrites: pendingWrites,
-		childHeights: tree.childHeights(),
-		tree: tree,
+		childHeights:  tree.childHeights(),
+		tree:          tree,
 	}
 }
 
@@ -125,7 +125,7 @@ func (l *Link) intoStored(tree *Tree) *Link {
 func (l *Link) marshal() ([]byte, error) {
 	var (
 		buf64 [8]byte
-		key []byte
+		key   []byte
 	)
 
 	buf := bytes.NewBuffer(nil)

@@ -1,17 +1,17 @@
 package merk
 
 import (
-	"fmt"
 	"bytes"
-	"errors"
-	"math"
 	"encoding/binary"
+	"errors"
+	"fmt"
+	"math"
 )
 
 type Tree struct {
-  kv    *KV
-  left  *Link
-  right *Link
+	kv    *KV
+	left  *Link
+	right *Link
 }
 
 func newTree(key, value []byte) *Tree {
@@ -86,7 +86,6 @@ func (t *Tree) childHash(isLeft bool) Hash {
 func (t *Tree) hash() Hash {
 	return nodeHash(t.kvHash(), t.childHash(true), t.childHash(false))
 }
-
 
 func (t *Tree) childPendingWrites(isLeft bool) uint8 {
 	var link *Link = t.link(isLeft)
@@ -194,9 +193,9 @@ func (t *Tree) commit(c *Commiter) error {
 			return err
 		}
 		t.setLink(true, &Link{
-			linkType: Stored,
-			hash: left.tree.hash(),
-			tree: left.tree,
+			linkType:     Stored,
+			hash:         left.tree.hash(),
+			tree:         left.tree,
 			childHeights: left.childHeights,
 		})
 	}
@@ -207,9 +206,9 @@ func (t *Tree) commit(c *Commiter) error {
 			return err
 		}
 		t.setLink(false, &Link{
-			linkType: Stored,
-			hash: right.tree.hash(),
-			tree: right.tree,
+			linkType:     Stored,
+			hash:         right.tree.hash(),
+			tree:         right.tree,
 			childHeights: right.childHeights,
 		})
 	}
@@ -242,7 +241,7 @@ func sideToStr(isLeft bool) string {
 
 func (t *Tree) marshal() ([]byte, error) {
 	var (
-		buf64 [8]byte
+		buf64               [8]byte
 		haveLeft, haveRight uint8
 	)
 

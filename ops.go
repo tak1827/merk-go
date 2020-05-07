@@ -2,8 +2,8 @@ package merk
 
 import (
 	"fmt"
-	"math"
 	"github.com/davecgh/go-spew/spew"
+	"math"
 )
 
 type OpType uint8
@@ -56,7 +56,7 @@ func build(batch Batch) *Tree {
 func apply(tree *Tree, batch Batch) (*Tree, [][]byte) {
 	var (
 		deletedKeys, deletedKeysRight [][]byte
-		leftBatch, rightBatch Batch
+		leftBatch, rightBatch         Batch
 	)
 
 	found, mid := binarySearchBy(tree.key(), batch)
@@ -106,16 +106,16 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte)
 		tree.walk(true, func(maybeLeft *Tree) *Tree {
 			maybeLeft, deletedKeysLeft := applyTo(maybeLeft, leftBatch)
 
-	 		deletedKeys	= append(deletedKeys, deletedKeysLeft...)
-	 		return maybeLeft
+			deletedKeys = append(deletedKeys, deletedKeysLeft...)
+			return maybeLeft
 		})
 	}
 
 	if len(rightBatch) != 0 {
 		tree.walk(false, func(maybeRight *Tree) *Tree {
 			maybeRight, deletedKeysRight := applyTo(maybeRight, rightBatch)
-	 		deletedKeys	= append(deletedKeys, deletedKeysRight...)
-	 		return maybeRight
+			deletedKeys = append(deletedKeys, deletedKeysRight...)
+			return maybeRight
 		})
 	}
 
@@ -140,7 +140,7 @@ func maybeBalance(tree *Tree) *Tree {
 
 	if (isLeft && childIsLeft) || (!isLeft && !childIsLeft) {
 		spew.Dump("!")
-		tree.walkExpect(isLeft, func (child *Tree) *Tree{ return rotate(child, !isLeft) })
+		tree.walkExpect(isLeft, func(child *Tree) *Tree { return rotate(child, !isLeft) })
 	}
 
 	return rotate(tree, isLeft)
@@ -148,8 +148,8 @@ func maybeBalance(tree *Tree) *Tree {
 
 func rotate(tree *Tree, isLeft bool) *Tree {
 	var (
-		err error
-		child *Tree
+		err             error
+		child           *Tree
 		maybeGrandchild *Tree
 	)
 
@@ -176,7 +176,7 @@ func rotate(tree *Tree, isLeft bool) *Tree {
 func remove(tree *Tree) *Tree {
 	var (
 		hasLeft, hasRight, isLeft bool
-		maybeTree *Tree
+		maybeTree                 *Tree
 	)
 
 	if tree.link(true) != nil {
@@ -188,24 +188,24 @@ func remove(tree *Tree) *Tree {
 	isLeft = tree.childHeight(true) > tree.childHeight(false)
 
 	if hasLeft && hasRight {
-    // two children, promote edge of taller child
-    tallChild := tree.detachExpect(isLeft) // 88
-    shortChild := tree.detachExpect(!isLeft) // 50
-    maybeTree = promoteEdge(tallChild, shortChild, !isLeft)
-  } else if hasLeft || hasRight {
-    // single child, promote it
-    maybeTree = tree.detachExpect(isLeft)
-  } else {
-  	// no child
-  }
+		// two children, promote edge of taller child
+		tallChild := tree.detachExpect(isLeft)   // 88
+		shortChild := tree.detachExpect(!isLeft) // 50
+		maybeTree = promoteEdge(tallChild, shortChild, !isLeft)
+	} else if hasLeft || hasRight {
+		// single child, promote it
+		maybeTree = tree.detachExpect(isLeft)
+	} else {
+		// no child
+	}
 
-  return maybeTree
+	return maybeTree
 }
 
 func promoteEdge(tree, attach *Tree, isLeft bool) *Tree {
 	var (
 		edge, maybeChild *Tree
-		err error
+		err              error
 	)
 
 	edge, maybeChild = removeEdge(tree, isLeft)
@@ -223,7 +223,7 @@ func promoteEdge(tree, attach *Tree, isLeft bool) *Tree {
 	return maybeBalance(edge)
 }
 
-func removeEdge(t *Tree, isLeft bool) (*Tree, *Tree)  {
+func removeEdge(t *Tree, isLeft bool) (*Tree, *Tree) {
 	var tree, edge, maybeChild *Tree
 
 	if t != nil && t.link(isLeft) != nil {

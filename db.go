@@ -1,24 +1,23 @@
 package merk
 
 import (
-	badger "github.com/dgraph-io/badger/v2"
+	"errors"
 	"fmt"
-  "errors"
-  // "bytes"
+	badger "github.com/dgraph-io/badger/v2"
+	// "bytes"
 )
-
 
 // TOOD: Change to name
 const DefaultDBPath = "./merkdb"
 
 type DB struct {
-  badger    *badger.DB
-  path string
+	badger *badger.DB
+	path   string
 }
 
 var (
 	RootKey = []byte(".root")
-	gDB *DB
+	gDB     *DB
 )
 
 func defaultDBOpts(path string) badger.Options {
@@ -32,109 +31,103 @@ func defaultDBOpts(path string) badger.Options {
 }
 
 func openDB(path string) error {
-  if gDB != nil {
-    return errors.New("db already open")
-  }
+	if gDB != nil {
+		return errors.New("db already open")
+	}
 
 	ops := defaultDBOpts(path)
 
 	db, err := badger.Open(ops)
-  if err != nil {
-	  return fmt.Errorf("failed to open db: %w", err)
-  }
+	if err != nil {
+		return fmt.Errorf("failed to open db: %w", err)
+	}
 
-  gDB = &DB{db, ops.Dir}
+	gDB = &DB{db, ops.Dir}
 
-  return nil
+	return nil
 }
 
 func (db *DB) closeDB() {
-  gDB = nil
-  db.badger.Close()
+	gDB = nil
+	db.badger.Close()
 }
 
 func (db *DB) destroy() error {
-  err := db.badger.DropAll()
-  return err
+	err := db.badger.DropAll()
+	return err
 }
 
 func (db *DB) getItem(key []byte) ([]byte, error) {
-  var copy []byte
+	var copy []byte
 
-  if err := db.badger.View(func(txn *badger.Txn) error {
+	if err := db.badger.View(func(txn *badger.Txn) error {
 
-    item, err := txn.Get(key)
-    if err != nil {
-      return fmt.Errorf("failed get key: %w", err)
-    }
+		item, err := txn.Get(key)
+		if err != nil {
+			return fmt.Errorf("failed get key: %w", err)
+		}
 
-    val, err := item.ValueCopy(nil)
-    if err != nil {
-      return fmt.Errorf("failed item value: %w", err)
-    }
+		val, err := item.ValueCopy(nil)
+		if err != nil {
+			return fmt.Errorf("failed item value: %w", err)
+		}
 
-    copy = append([]byte{}, val...)
+		copy = append([]byte{}, val...)
 
-    return nil
+		return nil
 
-  }); err != nil {
-    return nil, fmt.Errorf("failed db View: %w", err)
-  }
+	}); err != nil {
+		return nil, fmt.Errorf("failed db View: %w", err)
+	}
 
-  return copy, nil
+	return copy, nil
 }
 
 func (db *DB) newBatch() *badger.WriteBatch {
-  return db.badger.NewWriteBatch()
+	return db.badger.NewWriteBatch()
 }
 
 func (db *DB) fetchTree(key []byte) (*Tree, error) {
-  if key == nil {
-    return nil, errors.New("empty key while fetching tree")
-  }
+	if key == nil {
+		return nil, errors.New("empty key while fetching tree")
+	}
 
-  item, err := db.getItem(key)
-  if err != nil {
-    return nil, fmt.Errorf("failed getItem: %w", err)
-  }
+	item, err := db.getItem(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed getItem: %w", err)
+	}
 
-  t, err := unmarshalTree(key, item)
-  if err != nil {
-  	return nil, fmt.Errorf("failed unmarshalTree: %w", err)
-  }
+	t, err := unmarshalTree(key, item)
+	if err != nil {
+		return nil, fmt.Errorf("failed unmarshalTree: %w", err)
+	}
 
-  return t, nil
+	return t, nil
 }
 
 func (db *DB) fetchTrees(key []byte) (*Tree, error) {
-  tree, err := db.fetchTree(key)
-  if err !=nil {
-    return nil, err
-  }
+	tree, err := db.fetchTree(key)
+	if err != nil {
+		return nil, err
+	}
 
-  // spew.Dump("--------------")
-  // spew.Dump(tree)
-  // if bytes.Equal(key, []byte("2")) {
-  //   panic("hoge")
-  // }
+	var leftLink *Link = tree.link(true)
+	if leftLink != nil {
+		leftTree, err := db.fetchTrees(leftLink.key)
+		if err != nil {
+			return nil, err
+		}
+		leftLink = leftLink.intoStored(leftTree)
+	}
 
-  var leftLink *Link = tree.link(true)
-  if leftLink != nil {
-    leftTree, err := db.fetchTrees(leftLink.key)
-    if err != nil {
-      return nil, err
-    }
-    leftLink = leftLink.intoStored(leftTree)
-  }
+	var rightLink *Link = tree.link(false)
+	if rightLink != nil {
+		rightTree, err := db.fetchTrees(rightLink.key)
+		if err != nil {
+			return nil, err
+		}
+		rightLink = rightLink.intoStored(rightTree)
+	}
 
-  var rightLink *Link = tree.link(false)
-  if rightLink != nil {
-    rightTree, err := db.fetchTrees(rightLink.key)
-    if err != nil {
-      return nil, err
-    }
-    rightLink = rightLink.intoStored(rightTree)
-  }
-
-  return tree, nil
+	return tree, nil
 }

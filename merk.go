@@ -2,13 +2,12 @@ package merk
 
 import (
 	"bytes"
-	"github.com/davecgh/go-spew/spew"
 	"fmt"
 	"strings"
 )
 
 type Merk struct {
-  tree *Tree
+	tree *Tree
 }
 
 func newMerk() (*Merk, error) {
@@ -21,10 +20,9 @@ func newMarkWithDB(path string) (*Merk, error) {
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
-	topKey, err  := gDB.getItem(RootKey)
+	topKey, err := gDB.getItem(RootKey)
 	if err != nil {
 		if strings.Contains(err.Error(), "Key not found") {
-			spew.Dump("++++++++++++")
 			return newMerk()
 		}
 		return nil, err
@@ -85,7 +83,7 @@ func (m *Merk) apply(batch Batch) [][]byte {
 	return m.applyUnchecked(batch)
 }
 
-func (m *Merk) applyUnchecked(batch Batch) (deletedKeys [][]byte){
+func (m *Merk) applyUnchecked(batch Batch) (deletedKeys [][]byte) {
 	m.tree, deletedKeys = applyTo(m.tree, batch)
 
 	if gDB != nil {
@@ -119,8 +117,6 @@ func (m *Merk) commit(deletedKeys [][]byte) error {
 		}
 	}
 
-	// spew.Dump(deletedKeys)
-	// panic("delte kkey")
 	for _, key := range deletedKeys {
 		if err := batch.Delete(key); err != nil {
 			return err
@@ -128,8 +124,6 @@ func (m *Merk) commit(deletedKeys [][]byte) error {
 	}
 
 	// write to db
-	spew.Dump("&&&&&&&&")
-	// spew.Dump(batch.Error())
 	if err := batch.Flush(); err != nil {
 		return err
 	}

@@ -44,7 +44,7 @@ func build(batch Batch) *Tree {
 	var midOp OpType = batch[midIndex].op
 	var midValue []byte = batch[midIndex].val
 	if midOp == Delete {
-		panic(fmt.Sprintf("Tried to delete non-existent key %v", midKey))
+		panic(fmt.Sprintf("tried to delete non-existent key %v", midKey))
 	}
 
 	midTree := newTree(midKey, midValue)
@@ -159,14 +159,14 @@ func rotate(tree *Tree, isLeft bool) *Tree {
 	if maybeGrandchild != nil {
 		err = tree.attach(isLeft, maybeGrandchild)
 		if err != nil {
-			fmt.Errorf("Fialed to attach grand child: %w", err)
+			fmt.Errorf("fialed to attach grand child: %w", err)
 		}
 	}
 	tree = maybeBalance(tree)
 
 	err = child.attach(!isLeft, tree)
 	if err != nil {
-		fmt.Errorf("Fialed to attach tree: %w", err)
+		fmt.Errorf("fialed to attach tree: %w", err)
 	}
 	child = maybeBalance(child)
 

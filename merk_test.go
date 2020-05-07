@@ -4,14 +4,15 @@ import (
 	"testing"
 	"github.com/stretchr/testify/require"
 	// "errors"
-	// "github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 )
+
+const testDBName string = "testdb"
 
 func TestApply(t *testing.T) {
 	var batch1, batch2, batch3, batch4, batch5, batch6 Batch
 
-	m, _ := newMerk("")
-	defer closeDB(m.db)
+	m, _ := newMerk()
 
 	/** Insert & Update Case **/
 	op0 := &Op{Put, []byte("0"), []byte("value")}
@@ -79,39 +80,98 @@ func TestApply(t *testing.T) {
 	m.apply(batch6)
 
 	require.Nil(t, m.tree)
-
-	// require.NoError(t, errors.New("Debug"))
 }
 
 func TestGet(t *testing.T) {
-	var batch1 Batch
+	var batch Batch
 
-	m, _ := newMerk("")
-	defer closeDB(m.db)
+	m, _ := newMerk()
 
-	/** Insert & Update Case **/
-	op0 := &Op{Put, []byte("0"), []byte("value0")}
-	op1 := &Op{Put, []byte("1"), []byte("value1")}
-	op2 := &Op{Put, []byte("2"), []byte("value2")}
-	op3 := &Op{Put, []byte("3"), []byte("value3")}
-	op4 := &Op{Put, []byte("4"), []byte("value4")}
-	op5 := &Op{Put, []byte("5"), []byte("value5")}
-	op6 := &Op{Put, []byte("6"), []byte("value6")}
-	op7 := &Op{Put, []byte("7"), []byte("value7")}
-	op8 := &Op{Put, []byte("8"), []byte("value8")}
-	op9 := &Op{Put, []byte("9"), []byte("value9")}
+	op0 := &Op{Put, []byte("key0"), []byte("value0")}
+	op1 := &Op{Put, []byte("key1"), []byte("value1")}
+	op2 := &Op{Put, []byte("key2"), []byte("value2")}
+	op3 := &Op{Put, []byte("key3"), []byte("value3")}
+	op4 := &Op{Put, []byte("key4"), []byte("value4")}
+	op5 := &Op{Put, []byte("key5"), []byte("value5")}
+	op6 := &Op{Put, []byte("key6"), []byte("value6")}
+	op7 := &Op{Put, []byte("key7"), []byte("value7")}
+	op8 := &Op{Put, []byte("key8"), []byte("value8")}
+	op9 := &Op{Put, []byte("key9"), []byte("value9")}
 
-	batch1 = append(batch1, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
-	m.apply(batch1)
+	batch = append(batch, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
+	m.apply(batch)
 
-	require.EqualValues(t, []byte("value0"), m.get([]byte("0")))
-	require.EqualValues(t, []byte("value1"), m.get([]byte("1")))
-	require.EqualValues(t, []byte("value2"), m.get([]byte("2")))
-	require.EqualValues(t, []byte("value3"), m.get([]byte("3")))
-	require.EqualValues(t, []byte("value4"), m.get([]byte("4")))
-	require.EqualValues(t, []byte("value5"), m.get([]byte("5")))
-	require.EqualValues(t, []byte("value6"), m.get([]byte("6")))
-	require.EqualValues(t, []byte("value7"), m.get([]byte("7")))
-	require.EqualValues(t, []byte("value8"), m.get([]byte("8")))
-	require.EqualValues(t, []byte("value9"), m.get([]byte("9")))
+	require.EqualValues(t, []byte("value0"), m.get([]byte("key0")))
+	require.EqualValues(t, []byte("value1"), m.get([]byte("key1")))
+	require.EqualValues(t, []byte("value2"), m.get([]byte("key2")))
+	require.EqualValues(t, []byte("value3"), m.get([]byte("key3")))
+	require.EqualValues(t, []byte("value4"), m.get([]byte("key4")))
+	require.EqualValues(t, []byte("value5"), m.get([]byte("key5")))
+	require.EqualValues(t, []byte("value6"), m.get([]byte("key6")))
+	require.EqualValues(t, []byte("value7"), m.get([]byte("key7")))
+	require.EqualValues(t, []byte("value8"), m.get([]byte("key8")))
+	require.EqualValues(t, []byte("value9"), m.get([]byte("key9")))
+}
+
+func TestCommitNoFetchTree(t *testing.T) {
+	m := buildMerkWithDB()
+
+	defer gDB.closeDB()
+	defer gDB.destroy()
+
+	require.EqualValues(t, []byte("key5"), m.tree.key())
+	require.EqualValues(t, []byte("key2"), m.tree.child(true).key())
+	require.EqualValues(t, []byte("key1"), m.tree.child(true).child(true).key())
+	require.Nil(t,                         m.tree.child(true).child(true).link(true).tree)
+	require.EqualValues(t, []byte("key4"), m.tree.child(true).child(false).key())
+	require.Nil(t,                         m.tree.child(true).child(false).link(true).tree)
+	require.EqualValues(t, []byte("key8"), m.tree.child(false).key())
+	require.EqualValues(t, []byte("key7"), m.tree.child(false).child(true).key())
+	require.Nil(t,                         m.tree.child(false).child(true).link(true).tree)
+	require.EqualValues(t, []byte("key9"), m.tree.child(false).child(false).key())
+}
+
+func TestCommitFetchTree(t *testing.T) {
+	m := buildMerkWithDB()
+
+	gDB.closeDB()
+
+	m, _ = newMarkWithDB(testDBName)
+	defer gDB.closeDB()
+	defer gDB.destroy()
+
+	spew.Dump(m.tree)
+
+	require.EqualValues(t, []byte("key5"), m.tree.key())
+	require.EqualValues(t, []byte("key2"), m.tree.child(true).key())
+	require.EqualValues(t, []byte("key1"), m.tree.child(true).child(true).key())
+	require.EqualValues(t, []byte("key0"), m.tree.child(true).child(true).child(true).key())
+	require.EqualValues(t, []byte("key4"), m.tree.child(true).child(false).key())
+	require.EqualValues(t, []byte("key3"), m.tree.child(true).child(false).child(true).key())
+	require.EqualValues(t, []byte("key8"), m.tree.child(false).key())
+	require.EqualValues(t, []byte("key7"), m.tree.child(false).child(true).key())
+	require.EqualValues(t, []byte("key6"), m.tree.child(false).child(true).child(true).key())
+	require.EqualValues(t, []byte("key9"), m.tree.child(false).child(false).key())
+}
+
+func buildMerkWithDB() *Merk {
+	var batch Batch
+
+	m, _ := newMarkWithDB(testDBName)
+
+	op0 := &Op{Put, []byte("key0"), []byte("value0")}
+	op1 := &Op{Put, []byte("key1"), []byte("value1")}
+	op2 := &Op{Put, []byte("key2"), []byte("value2")}
+	op3 := &Op{Put, []byte("key3"), []byte("value3")}
+	op4 := &Op{Put, []byte("key4"), []byte("value4")}
+	op5 := &Op{Put, []byte("key5"), []byte("value5")}
+	op6 := &Op{Put, []byte("key6"), []byte("value6")}
+	op7 := &Op{Put, []byte("key7"), []byte("value7")}
+	op8 := &Op{Put, []byte("key8"), []byte("value8")}
+	op9 := &Op{Put, []byte("key9"), []byte("value9")}
+
+	batch = append(batch, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
+	m.apply(batch)
+
+	return m
 }

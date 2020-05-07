@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"bytes"
 	"errors"
-	"github.com/valyala/bytebufferpool"
 	"math"
 	"encoding/binary"
-	"github.com/davecgh/go-spew/spew"
 )
 
 type Tree struct {
@@ -62,8 +60,8 @@ func (t *Tree) child(isLeft bool) *Tree {
 	}
 
 	if l.linkType == Pruned {
-		if child, err := fetchTree(globalDB, l.key); err != nil {
-			panic(fmt.Sprintf("Failed to fetch node: %v", err))
+		if child, err := gDB.fetchTree(l.key); err != nil {
+			panic(fmt.Sprintf("failed to fetch node: %v", err))
 		} else {
 			return child
 		}
@@ -128,11 +126,11 @@ func (t *Tree) attach(isLeft bool, maybeChild *Tree) error {
 	}
 
 	if bytes.Equal(maybeChild.key(), t.key()) {
-		return errors.New("Tried to attach tree with same key")
+		return errors.New("tried to attach tree with same key")
 	}
 
 	if t.link(isLeft) != nil {
-		return fmt.Errorf("Tried to attach to %v tree slot, but it is already Some", sideToStr(isLeft))
+		return fmt.Errorf("tried to attach to %v tree slot, but it is already Some", sideToStr(isLeft))
 	}
 
 	slot := fromModifiedTree(maybeChild)
@@ -151,7 +149,7 @@ func (t *Tree) detach(isLeft bool) *Tree {
 
 	switch slot.linkType {
 	case Pruned:
-		if child, err := fetchTree(globalDB, slot.key); err != nil {
+		if child, err := gDB.fetchTree(slot.key); err != nil {
 			panic(fmt.Sprintf("Failed to fetch node: %v", err))
 		} else {
 			return child
@@ -192,7 +190,9 @@ func (t *Tree) withValue(value []byte) {
 func (t *Tree) commit(c *Commiter) error {
 	left := t.link(true)
 	if left != nil && left.linkType == Modified {
-		left.tree.commit(c)
+		if err := left.tree.commit(c); err != nil {
+			return err
+		}
 		t.setLink(true, &Link{
 			linkType: Stored,
 			hash: left.tree.hash(),
@@ -203,7 +203,9 @@ func (t *Tree) commit(c *Commiter) error {
 
 	right := t.link(false)
 	if right != nil && right.linkType == Modified {
-		right.tree.commit(c)
+		if err := right.tree.commit(c); err != nil {
+			return err
+		}
 		t.setLink(false, &Link{
 			linkType: Stored,
 			hash: right.tree.hash(),
@@ -219,8 +221,6 @@ func (t *Tree) commit(c *Commiter) error {
 	}
 
 	if doPrune := c.prune(t); doPrune {
-		spew.Dump("&&&&&&&")
-		spew.Dump(t)
 		if t.link(true) != nil {
 			t.left = t.left.intoPruned()
 		}
@@ -232,10 +232,6 @@ func (t *Tree) commit(c *Commiter) error {
 	return nil
 }
 
-func (t *Tree) load() {
-	//
-}
-
 func sideToStr(isLeft bool) string {
 	if isLeft {
 		return "left"
@@ -244,28 +240,30 @@ func sideToStr(isLeft bool) string {
 	}
 }
 
-func (t *Tree) marshal(buf *bytebufferpool.ByteBuffer) error {
+func (t *Tree) marshal() ([]byte, error) {
 	var (
 		buf64 [8]byte
 		haveLeft, haveRight uint8
 	)
 
+	buf := bytes.NewBuffer(nil)
+
 	// Write kv value
 	if uint32(len(t.value())) > uint32(math.MaxUint32) {
-		return fmt.Errorf("Too long, t.value(): %v ", t.value())
+		return nil, fmt.Errorf("Too long, t.value(): %v ", t.value())
 	}
 	binary.LittleEndian.PutUint32(buf64[:4], uint32(len(t.value())))
 	if _, err := buf.Write(buf64[:4]); err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := buf.Write(t.value()); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Write kv hash
 	hash := t.kvHash()
 	if _, err := buf.Write(hash[:]); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Write left link
@@ -273,11 +271,15 @@ func (t *Tree) marshal(buf *bytebufferpool.ByteBuffer) error {
 		haveLeft = 1
 	}
 	if err := buf.WriteByte(byte(haveLeft)); err != nil {
-		return err
+		return nil, err
 	}
 	if haveLeft == 1 {
-		if err := t.link(true).marshal(buf); err != nil {
-			return err
+		b, err := t.link(true).marshal()
+		if err != nil {
+			return nil, err
+		}
+		if _, err = buf.Write(b); err != nil {
+			return nil, err
 		}
 	}
 
@@ -286,15 +288,19 @@ func (t *Tree) marshal(buf *bytebufferpool.ByteBuffer) error {
 		haveRight = 1
 	}
 	if err := buf.WriteByte(byte(haveRight)); err != nil {
-		return err
+		return nil, err
 	}
 	if haveRight == 1 {
-		if err := t.link(false).marshal(buf); err != nil {
-			return err
+		b, err := t.link(false).marshal()
+		if err != nil {
+			return nil, err
+		}
+		if _, err = buf.Write(b); err != nil {
+			return nil, err
 		}
 	}
 
-	return nil
+	return buf.Bytes(), nil
 }
 
 func unmarshalTree(key, data []byte) (*Tree, error) {

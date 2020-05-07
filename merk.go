@@ -2,23 +2,40 @@ package merk
 
 import (
 	"bytes"
-	badger "github.com/dgraph-io/badger/v2"
+	"github.com/davecgh/go-spew/spew"
+	"fmt"
+	"strings"
 )
 
 type Merk struct {
   tree *Tree
-  db   *badger.DB
-  path string
+}
+
+func newMerk() (*Merk, error) {
+	return &Merk{}, nil
 }
 
 // Note: Keep merk single
-func newMerk(path string) (*Merk, error) {
-	badger, dbPath, err := openDB(path)
+func newMarkWithDB(path string) (*Merk, error) {
+	if err := openDB(path); err != nil {
+		return nil, fmt.Errorf("failed to open db: %w", err)
+	}
+
+	topKey, err  := gDB.getItem(RootKey)
 	if err != nil {
+		if strings.Contains(err.Error(), "Key not found") {
+			spew.Dump("++++++++++++")
+			return newMerk()
+		}
 		return nil, err
 	}
 
-	return &Merk{db: badger, path: dbPath}, nil
+	tree, err := gDB.fetchTrees(topKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetchTrees: %w", err)
+	}
+
+	return &Merk{tree}, nil
 }
 
 func (m *Merk) get(key []byte) []byte {
@@ -69,19 +86,16 @@ func (m *Merk) apply(batch Batch) {
 }
 
 func (m *Merk) applyUnchecked(batch Batch) {
-	// var deletedKeys [][]bytes
-	m.tree, _ = applyTo(m.tree, batch)
+	var deletedKeys [][]byte
+	m.tree, deletedKeys = applyTo(m.tree, batch)
 
-	// m.commit(deletedKeys)
-}
-
-func (m *Merk) destroy() error {
-	err := m.db.DropAll()
-	return err
+	if gDB != nil {
+		m.commit(deletedKeys)
+	}
 }
 
 func (m *Merk) commit(deletedKeys [][]byte) error {
-	batch := m.db.NewWriteBatch()
+	batch := gDB.newBatch()
 	defer batch.Cancel()
 
 	tree := m.tree
@@ -102,6 +116,8 @@ func (m *Merk) commit(deletedKeys [][]byte) error {
 		}
 	}
 
+	// spew.Dump(deletedKeys)
+	// panic("delte kkey")
 	for _, key := range deletedKeys {
 		if err := batch.Delete(key); err != nil {
 			return err
@@ -109,6 +125,8 @@ func (m *Merk) commit(deletedKeys [][]byte) error {
 	}
 
 	// write to db
+	spew.Dump("&&&&&&&&")
+	// spew.Dump(batch.Error())
 	if err := batch.Flush(); err != nil {
 		return err
 	}

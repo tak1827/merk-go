@@ -4,18 +4,29 @@ import (
 	"fmt"
 	"math"
 	"encoding/binary"
-	"github.com/valyala/bytebufferpool"
 	"bytes"
-	"github.com/davecgh/go-spew/spew"
 )
 
 type LinkType uint8
 
 const (
-	Pruned LinkType = 1 << iota
+	Pruned LinkType = iota + 1
 	Modified
 	Stored
 )
+
+func (l LinkType) String() string {
+  switch l {
+  case Pruned:
+      return "Pruned"
+  case Modified:
+      return "Modified"
+  case Stored:
+      return "Stored"
+  default:
+      return "Unknown"
+  }
+}
 
 // Note: linkType have specific fields
 // Pruned   -> hash,          childHeights, key
@@ -89,19 +100,35 @@ func (l *Link) intoPruned() *Link {
 		l.linkType = Pruned
 		l.key = l.tree.key()
 		l.tree = nil
-		spew.Dump("afdfdfdsfds")
-		spew.Dump(l)
 		return l
 	default:
 		panic("link type dose not match")
 	}
 }
 
-func (l *Link) marshal(buf *bytebufferpool.ByteBuffer) error {
+func (l *Link) intoStored(tree *Tree) *Link {
+	switch l.linkType {
+	case Pruned:
+		l.linkType = Stored
+		l.tree = tree
+		l.key = nil
+		return l
+	case Modified:
+		panic("Cannot restore from Modified tree")
+	case Stored:
+		return l
+	default:
+		panic("link type dose not match")
+	}
+}
+
+func (l *Link) marshal() ([]byte, error) {
 	var (
 		buf64 [8]byte
 		key []byte
 	)
+
+	buf := bytes.NewBuffer(nil)
 
 	switch l.linkType {
 	case Pruned:
@@ -114,30 +141,30 @@ func (l *Link) marshal(buf *bytebufferpool.ByteBuffer) error {
 
 	// Write key
 	if uint32(len(key)) > uint32(math.MaxUint32) {
-		return fmt.Errorf("Too long, key: %v ", key)
+		return nil, fmt.Errorf("too long, key: %v ", key)
 	}
 	binary.LittleEndian.PutUint32(buf64[:4], uint32(len(key)))
 	if _, err := buf.Write(buf64[:4]); err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := buf.Write(key); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Write hash
 	if _, err := buf.Write(l.hash[:]); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Write child heights
 	if err := buf.WriteByte(byte(l.childHeights[0])); err != nil {
-		return err
+		return nil, err
 	}
 	if err := buf.WriteByte(byte(l.childHeights[1])); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return buf.Bytes(), nil
 }
 
 func unmarshalLink(r *bytes.Reader) (*Link, error) {

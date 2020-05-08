@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"github.com/valyala/bytebufferpool"
 	"math"
+	"sync"
 )
 
 type Tree struct {
+	mu    sync.Mutex
 	kv    *KV
 	left  Link
 	right Link
@@ -23,7 +25,11 @@ func newTree(key, value []byte) *Tree {
 
 func treeFromFields(key, value []byte, hash Hash, left, right Link) *Tree {
 	kv := kvFromFields(key, value, hash)
-	return &Tree{kv, left, right}
+	return &Tree{
+		kv:    kv,
+		left:  left,
+		right: right,
+	}
 }
 
 func (t *Tree) key() []byte {
@@ -47,6 +53,9 @@ func (t *Tree) link(isLeft bool) Link {
 }
 
 func (t *Tree) setLink(isLeft bool, link Link) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	if isLeft {
 		t.left = link
 	} else {
@@ -86,11 +95,10 @@ func (t *Tree) hash() Hash {
 
 func (t *Tree) childHeight(isLeft bool) uint8 {
 	var l Link = t.link(isLeft)
-	if l != nil {
-		return l.height()
-	} else {
+	if l == nil {
 		return 0
 	}
+	return l.height()
 }
 
 func (t *Tree) childHeights() [2]uint8 {
@@ -166,6 +174,9 @@ func (t *Tree) walkExpect(isLeft bool, f func(tree *Tree) *Tree) {
 }
 
 func (t *Tree) withValue(value []byte) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	t.kv.value = value
 }
 
@@ -194,10 +205,8 @@ func (t *Tree) commit(c *Commiter) error {
 		})
 	}
 
-	if c.batch != nil {
-		if err := c.write(t); err != nil {
-			return err
-		}
+	if err := c.write(t); err != nil {
+		return err
 	}
 
 	if doPrune := c.prune(t); doPrune {

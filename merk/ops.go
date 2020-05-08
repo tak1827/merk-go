@@ -3,6 +3,7 @@ package merk
 import (
 	"fmt"
 	"math"
+	"sync"
 )
 
 type OpType uint8
@@ -91,32 +92,49 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte) {
 }
 
 func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte) {
-	var leftBatch Batch = batch[:mid]
-	var rightBatch Batch
+	var (
+		leftBatch, rightBatch Batch
+		deletedKeys           [][]byte
+		wg                    sync.WaitGroup
+	)
+
+	leftBatch = batch[:mid]
 	if exclusive {
 		rightBatch = batch[mid+1:]
 	} else {
 		rightBatch = batch[mid:]
 	}
 
-	var deletedKeys [][]byte
-
 	if len(leftBatch) != 0 {
-		tree.walk(true, func(maybeLeft *Tree) *Tree {
-			maybeLeft, deletedKeysLeft := applyTo(maybeLeft, leftBatch)
+		wg.Add(1)
 
-			deletedKeys = append(deletedKeys, deletedKeysLeft...)
-			return maybeLeft
-		})
+		go func() {
+			defer wg.Done()
+
+			tree.walk(true, func(maybeLeft *Tree) *Tree {
+				maybeLeft, deletedKeysLeft := applyTo(maybeLeft, leftBatch)
+
+				deletedKeys = append(deletedKeys, deletedKeysLeft...)
+				return maybeLeft
+			})
+		}()
 	}
 
 	if len(rightBatch) != 0 {
-		tree.walk(false, func(maybeRight *Tree) *Tree {
-			maybeRight, deletedKeysRight := applyTo(maybeRight, rightBatch)
-			deletedKeys = append(deletedKeys, deletedKeysRight...)
-			return maybeRight
-		})
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			tree.walk(false, func(maybeRight *Tree) *Tree {
+				maybeRight, deletedKeysRight := applyTo(maybeRight, rightBatch)
+				deletedKeys = append(deletedKeys, deletedKeysRight...)
+				return maybeRight
+			})
+		}()
 	}
+
+	wg.Wait()
 
 	return maybeBalance(tree), deletedKeys
 }

@@ -1,10 +1,10 @@
 package merk
 
 import (
-	"github.com/stretchr/testify/require"
-	"testing"
-	"golang.org/x/crypto/blake2b"
 	"bytes"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/blake2b"
+	"testing"
 )
 
 const testDBName string = "testdb"
@@ -172,11 +172,11 @@ func BenchmarkApply(b *testing.B) {
 	batchBuiler := func(n int) Batch {
 		var (
 			batch Batch
-			keys [][]byte
+			keys  [][]byte
 		)
 
 		for i := 0; i < 1000; i++ {
-			key := blake2b.Sum256([]byte("key"+string(n)+string(i)))
+			key := blake2b.Sum256([]byte("key" + string(n) + string(i)))
 			keys = append(keys, key[:])
 		}
 

@@ -71,3 +71,7 @@ func TestSortBytes(t *testing.T) {
 
 	require.EqualValues(t, [][]byte{[]byte("1"), []byte("2"), []byte("3"), []byte("4")}, b)
 }
+
+func TestRandIntn(t *testing.T) {
+	require.True(t, randIntn(10) < 10)
+}

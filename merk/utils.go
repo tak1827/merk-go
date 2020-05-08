@@ -3,6 +3,8 @@ package merk
 import (
 	"bytes"
 	"sort"
+	"math/rand"
+    "time"
 )
 
 func max(a []uint8) uint8 {
@@ -48,4 +50,9 @@ func sortBytes(data [][]byte) {
 	sort.SliceStable(data, func(i, j int) bool {
 		return string(data[i]) < string(data[j])
 	})
+}
+
+func randIntn(max int) int {
+	rand.Seed(time.Now().UnixNano())
+  return rand.Intn(max)
 }

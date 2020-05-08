@@ -2,7 +2,6 @@ package merk
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"math"
 )
 
@@ -139,7 +138,6 @@ func maybeBalance(tree *Tree) *Tree {
 	var childIsLeft bool = balanceFactor(tree.child(isLeft)) > 0
 
 	if (isLeft && childIsLeft) || (!isLeft && !childIsLeft) {
-		spew.Dump("!")
 		tree.walkExpect(isLeft, func(child *Tree) *Tree { return rotate(child, !isLeft) })
 	}
 

@@ -3,6 +3,8 @@ package merk
 import (
 	"github.com/stretchr/testify/require"
 	"testing"
+	"golang.org/x/crypto/blake2b"
+	"bytes"
 )
 
 const testDBName string = "testdb"
@@ -162,4 +164,36 @@ func buildMerkWithDB() *Merk {
 	m.apply(batch)
 
 	return m
+}
+
+func BenchmarkApply(b *testing.B) {
+	m, _ := newMerk()
+
+	batchBuiler := func(n int) Batch {
+		var (
+			batch Batch
+			keys [][]byte
+		)
+
+		for i := 0; i < 1000; i++ {
+			key := blake2b.Sum256([]byte("key"+string(n)+string(i)))
+			keys = append(keys, key[:])
+		}
+
+		sortBytes(keys)
+
+		for i := 0; i < 1000; i++ {
+			value := bytes.Repeat([]byte("x"), randIntn(1000))
+			op := &Op{Put, keys[i], value}
+			batch = append(batch, op)
+		}
+
+		return batch
+	}
+
+	for n := 0; n < b.N; n++ {
+		if _, err := m.apply(batchBuiler(n)); err != nil {
+			b.Fatal(err)
+		}
+	}
 }

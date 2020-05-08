@@ -7,3 +7,6 @@ fmt:
 
 test:
 	go test ./merk/
+
+bench:
+	go test ./merk/ -bench=. -benchtime=5s

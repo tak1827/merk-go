@@ -99,11 +99,11 @@ func (m *Merk) applyUnchecked(batch Batch) ([][]byte, error) {
 	sortBytes(deletedKeys)
 
 	// ensure tree valance
-	if m.tree != nil {
-		if err := m.tree.verify(); err != nil {
-			return nil, err
-		}
-	}
+	// if m.tree != nil {
+	// 	if err := m.tree.verify(); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	// commit if db exist
 	if gDB != nil {

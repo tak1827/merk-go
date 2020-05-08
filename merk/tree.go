@@ -7,11 +7,9 @@ import (
 	"fmt"
 	"github.com/valyala/bytebufferpool"
 	"math"
-	"sync"
 )
 
 type Tree struct {
-	mu    sync.Mutex
 	kv    *KV
 	left  Link
 	right Link
@@ -53,9 +51,6 @@ func (t *Tree) link(isLeft bool) Link {
 }
 
 func (t *Tree) setLink(isLeft bool, link Link) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	if isLeft {
 		t.left = link
 	} else {
@@ -174,9 +169,6 @@ func (t *Tree) walkExpect(isLeft bool, f func(tree *Tree) *Tree) {
 }
 
 func (t *Tree) withValue(value []byte) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	t.kv.value = value
 }
 

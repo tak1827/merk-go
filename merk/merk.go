@@ -2,7 +2,9 @@ package merk
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -67,14 +69,21 @@ func (m *Merk) rootHash() Hash {
 	}
 }
 
-func (m *Merk) apply(batch Batch) [][]byte {
-	// ensure keys in batch are sorted and unique
+func (m *Merk) apply(batch Batch) ([][]byte, error) {
 	var prevKey []byte
 	for i := 0; i < len(batch); i++ {
+		// ensure keys in batch are sorted and unique
 		if bytes.Compare(batch[i].key, prevKey) == -1 {
-			panic("Keys in batch must be sorted")
+			return nil, errors.New("keys in batch must be sorted")
 		} else if bytes.Equal(batch[i].key, prevKey) {
-			panic("Keys in batch must be unique")
+			return nil, errors.New("keys in batch must be unique")
+		}
+		// ensure size of keys and values less than limit
+		if uint32(len(batch[i].key)) > uint32(math.MaxUint32) {
+			return nil, fmt.Errorf("Too long, key: %v ", batch[i].key)
+		}
+		if uint32(len(batch[i].val)) > uint32(math.MaxUint32) {
+			return nil, fmt.Errorf("too long, value: %v ", batch[i].val)
 		}
 
 		prevKey = batch[i].key
@@ -83,16 +92,25 @@ func (m *Merk) apply(batch Batch) [][]byte {
 	return m.applyUnchecked(batch)
 }
 
-func (m *Merk) applyUnchecked(batch Batch) (deletedKeys [][]byte) {
+func (m *Merk) applyUnchecked(batch Batch) ([][]byte, error) {
+	var deletedKeys [][]byte
 	m.tree, deletedKeys = applyTo(m.tree, batch)
 
+	sortBytes(deletedKeys)
+
+	// ensure tree valance
+	if m.tree != nil {
+		if err := m.tree.verify(); err != nil {
+			return nil, err
+		}
+	}
+
+	// commit if db exist
 	if gDB != nil {
 		m.commit(deletedKeys)
 	}
 
-	sortBytes(deletedKeys)
-
-	return
+	return deletedKeys, nil
 }
 
 func (m *Merk) commit(deletedKeys [][]byte) error {

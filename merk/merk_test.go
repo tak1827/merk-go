@@ -48,19 +48,19 @@ func TestApply(t *testing.T) {
 	op19 := &Op{op: Delete, key: []byte("9")}
 
 	batch4 = append(batch4, op11, op15, op16, op19)
-	delKeys4 := m.apply(batch4)
+	delKeys4, _ := m.apply(batch4)
 
 	require.EqualValues(t, [][]byte{[]byte("1"), []byte("5"), []byte("6"), []byte("9")}, delKeys4)
 	require.NoError(t, m.tree.verify())
 
 	batch5 = append(batch5, op12, op13, op17)
-	delKeys5 := m.apply(batch5)
+	delKeys5, _ := m.apply(batch5)
 
 	require.EqualValues(t, [][]byte{[]byte("2"), []byte("3"), []byte("7")}, delKeys5)
 	require.NoError(t, m.tree.verify())
 
 	batch6 = append(batch6, op10, op14, op18)
-	delKeys6 := m.apply(batch6)
+	delKeys6, _ := m.apply(batch6)
 
 	require.EqualValues(t, [][]byte{[]byte("0"), []byte("4"), []byte("8")}, delKeys6)
 	require.Nil(t, m.tree)
@@ -136,7 +136,7 @@ func TestCommitDel(t *testing.T) {
 	op19 := &Op{op: Delete, key: []byte("key9")}
 
 	batch = append(batch, op11, op15, op16, op19)
-	delKeys := m.apply(batch)
+	delKeys, _ := m.apply(batch)
 
 	require.EqualValues(t, [][]byte{[]byte("key1"), []byte("key5"), []byte("key6"), []byte("key9")}, delKeys)
 	require.NoError(t, m.tree.verify())

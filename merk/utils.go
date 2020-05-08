@@ -52,7 +52,7 @@ func sortBytes(data [][]byte) {
 	})
 }
 
-func randIntn(max int) int {
+func RandIntn(max int) int {
 	rand.Seed(time.Now().UnixNano())
 	return rand.Intn(max)
 }

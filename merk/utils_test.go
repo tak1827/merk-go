@@ -73,5 +73,5 @@ func TestSortBytes(t *testing.T) {
 }
 
 func TestRandIntn(t *testing.T) {
-	require.True(t, randIntn(10) < 10)
+	require.True(t, RandIntn(10) < 10)
 }

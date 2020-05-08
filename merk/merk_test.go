@@ -166,7 +166,7 @@ func buildMerkWithDB() *Merk {
 	return m
 }
 
-func BenchmarkApply(b *testing.B) {
+func BenchmarkInsert(b *testing.B) {
 	m, _ := newMerk()
 
 	batchBuiler := func(n int) Batch {
@@ -182,9 +182,9 @@ func BenchmarkApply(b *testing.B) {
 
 		sortBytes(keys)
 
-		for i := 0; i < 1000; i++ {
-			value := bytes.Repeat([]byte("x"), randIntn(1000))
-			op := &Op{Put, keys[i], value}
+		for _, key := range keys {
+			value := bytes.Repeat([]byte("x"), RandIntn(1000))
+			op := &Op{Put, key, value}
 			batch = append(batch, op)
 		}
 
@@ -192,7 +192,7 @@ func BenchmarkApply(b *testing.B) {
 	}
 
 	for n := 0; n < b.N; n++ {
-		if _, err := m.apply(batchBuiler(n)); err != nil {
+		if _, err := m.applyUnchecked(batchBuiler(n)); err != nil {
 			b.Fatal(err)
 		}
 	}

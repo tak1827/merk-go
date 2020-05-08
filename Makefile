@@ -10,3 +10,9 @@ test:
 
 bench:
 	go test ./merk/ -bench=. -benchtime=5s
+
+avltest:
+	go test ./avl/
+
+avlbench:
+	go test ./avl/ -bench=. -benchtime=5s

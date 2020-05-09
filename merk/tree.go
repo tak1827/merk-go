@@ -1,6 +1,7 @@
 package merk
 
 import (
+	// "sync"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -13,6 +14,7 @@ type Tree struct {
 	kv    *KV
 	left  Link
 	right Link
+	// mu sync.Mutex
 }
 
 func newTree(key, value []byte) *Tree {
@@ -51,6 +53,9 @@ func (t *Tree) link(isLeft bool) Link {
 }
 
 func (t *Tree) setLink(isLeft bool, link Link) {
+	// t.mu.Lock()
+	// defer t.mu.Unlock()
+
 	if isLeft {
 		t.left = link
 	} else {
@@ -169,6 +174,9 @@ func (t *Tree) walkExpect(isLeft bool, f func(tree *Tree) *Tree) {
 }
 
 func (t *Tree) withValue(value []byte) {
+	// t.mu.Lock()
+	// defer t.mu.Unlock()
+
 	t.kv.value = value
 }
 

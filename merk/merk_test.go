@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/blake2b"
 	"testing"
+	// "github.com/davecgh/go-spew/spew"
 )
 
 const testDBName string = "testdb"
@@ -15,16 +16,16 @@ func TestApply(t *testing.T) {
 	m, _ := newMerk()
 
 	/** Insert & Update Case **/
-	op0 := &Op{Put, []byte("0"), []byte("value")}
-	op1 := &Op{Put, []byte("1"), []byte("value")}
-	op2 := &Op{Put, []byte("2"), []byte("value")}
-	op3 := &Op{Put, []byte("3"), []byte("value")}
-	op4 := &Op{Put, []byte("4"), []byte("value")}
-	op5 := &Op{Put, []byte("5"), []byte("value")}
-	op6 := &Op{Put, []byte("6"), []byte("value")}
-	op7 := &Op{Put, []byte("7"), []byte("value")}
-	op8 := &Op{Put, []byte("8"), []byte("value")}
-	op9 := &Op{Put, []byte("9"), []byte("value")}
+	op0 := &OP{Put, []byte("0"), []byte("value")}
+	op1 := &OP{Put, []byte("1"), []byte("value")}
+	op2 := &OP{Put, []byte("2"), []byte("value")}
+	op3 := &OP{Put, []byte("3"), []byte("value")}
+	op4 := &OP{Put, []byte("4"), []byte("value")}
+	op5 := &OP{Put, []byte("5"), []byte("value")}
+	op6 := &OP{Put, []byte("6"), []byte("value")}
+	op7 := &OP{Put, []byte("7"), []byte("value")}
+	op8 := &OP{Put, []byte("8"), []byte("value")}
+	op9 := &OP{Put, []byte("9"), []byte("value")}
 
 	batch1 = append(batch1, op3, op6, op8)
 	m.apply(batch1)
@@ -38,16 +39,16 @@ func TestApply(t *testing.T) {
 	require.NoError(t, m.tree.verify())
 
 	/** Delete Case **/
-	op10 := &Op{op: Delete, key: []byte("0")}
-	op11 := &Op{op: Delete, key: []byte("1")}
-	op12 := &Op{op: Delete, key: []byte("2")}
-	op13 := &Op{op: Delete, key: []byte("3")}
-	op14 := &Op{op: Delete, key: []byte("4")}
-	op15 := &Op{op: Delete, key: []byte("5")}
-	op16 := &Op{op: Delete, key: []byte("6")}
-	op17 := &Op{op: Delete, key: []byte("7")}
-	op18 := &Op{op: Delete, key: []byte("8")}
-	op19 := &Op{op: Delete, key: []byte("9")}
+	op10 := &OP{O: Del, K: []byte("0")}
+	op11 := &OP{O: Del, K: []byte("1")}
+	op12 := &OP{O: Del, K: []byte("2")}
+	op13 := &OP{O: Del, K: []byte("3")}
+	op14 := &OP{O: Del, K: []byte("4")}
+	op15 := &OP{O: Del, K: []byte("5")}
+	op16 := &OP{O: Del, K: []byte("6")}
+	op17 := &OP{O: Del, K: []byte("7")}
+	op18 := &OP{O: Del, K: []byte("8")}
+	op19 := &OP{O: Del, K: []byte("9")}
 
 	batch4 = append(batch4, op11, op15, op16, op19)
 	delKeys4, _ := m.apply(batch4)
@@ -73,16 +74,16 @@ func TestGet(t *testing.T) {
 
 	m, _ := newMerk()
 
-	op0 := &Op{Put, []byte("key0"), []byte("value0")}
-	op1 := &Op{Put, []byte("key1"), []byte("value1")}
-	op2 := &Op{Put, []byte("key2"), []byte("value2")}
-	op3 := &Op{Put, []byte("key3"), []byte("value3")}
-	op4 := &Op{Put, []byte("key4"), []byte("value4")}
-	op5 := &Op{Put, []byte("key5"), []byte("value5")}
-	op6 := &Op{Put, []byte("key6"), []byte("value6")}
-	op7 := &Op{Put, []byte("key7"), []byte("value7")}
-	op8 := &Op{Put, []byte("key8"), []byte("value8")}
-	op9 := &Op{Put, []byte("key9"), []byte("value9")}
+	op0 := &OP{Put, []byte("key0"), []byte("value0")}
+	op1 := &OP{Put, []byte("key1"), []byte("value1")}
+	op2 := &OP{Put, []byte("key2"), []byte("value2")}
+	op3 := &OP{Put, []byte("key3"), []byte("value3")}
+	op4 := &OP{Put, []byte("key4"), []byte("value4")}
+	op5 := &OP{Put, []byte("key5"), []byte("value5")}
+	op6 := &OP{Put, []byte("key6"), []byte("value6")}
+	op7 := &OP{Put, []byte("key7"), []byte("value7")}
+	op8 := &OP{Put, []byte("key8"), []byte("value8")}
+	op9 := &OP{Put, []byte("key9"), []byte("value9")}
 
 	batch = append(batch, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
 	m.apply(batch)
@@ -132,10 +133,10 @@ func TestCommitDel(t *testing.T) {
 	defer gDB.closeDB()
 	defer gDB.destroy()
 
-	op11 := &Op{op: Delete, key: []byte("key1")}
-	op15 := &Op{op: Delete, key: []byte("key5")}
-	op16 := &Op{op: Delete, key: []byte("key6")}
-	op19 := &Op{op: Delete, key: []byte("key9")}
+	op11 := &OP{O: Del, K: []byte("key1")}
+	op15 := &OP{O: Del, K: []byte("key5")}
+	op16 := &OP{O: Del, K: []byte("key6")}
+	op19 := &OP{O: Del, K: []byte("key9")}
 
 	batch = append(batch, op11, op15, op16, op19)
 	delKeys, _ := m.apply(batch)
@@ -149,16 +150,16 @@ func buildMerkWithDB() *Merk {
 
 	m, _ := newMarkWithDB(testDBName)
 
-	op0 := &Op{Put, []byte("key0"), []byte("value0")}
-	op1 := &Op{Put, []byte("key1"), []byte("value1")}
-	op2 := &Op{Put, []byte("key2"), []byte("value2")}
-	op3 := &Op{Put, []byte("key3"), []byte("value3")}
-	op4 := &Op{Put, []byte("key4"), []byte("value4")}
-	op5 := &Op{Put, []byte("key5"), []byte("value5")}
-	op6 := &Op{Put, []byte("key6"), []byte("value6")}
-	op7 := &Op{Put, []byte("key7"), []byte("value7")}
-	op8 := &Op{Put, []byte("key8"), []byte("value8")}
-	op9 := &Op{Put, []byte("key9"), []byte("value9")}
+	op0 := &OP{Put, []byte("key0"), []byte("value0")}
+	op1 := &OP{Put, []byte("key1"), []byte("value1")}
+	op2 := &OP{Put, []byte("key2"), []byte("value2")}
+	op3 := &OP{Put, []byte("key3"), []byte("value3")}
+	op4 := &OP{Put, []byte("key4"), []byte("value4")}
+	op5 := &OP{Put, []byte("key5"), []byte("value5")}
+	op6 := &OP{Put, []byte("key6"), []byte("value6")}
+	op7 := &OP{Put, []byte("key7"), []byte("value7")}
+	op8 := &OP{Put, []byte("key8"), []byte("value8")}
+	op9 := &OP{Put, []byte("key9"), []byte("value9")}
 
 	batch = append(batch, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
 	m.apply(batch)
@@ -166,34 +167,96 @@ func buildMerkWithDB() *Merk {
 	return m
 }
 
-func BenchmarkInsert(b *testing.B) {
-	m, _ := newMerk()
+func buildBatch(b Batch, size, n int) Batch {
+	var batch Batch
 
-	batchBuiler := func(n int) Batch {
-		var (
-			batch Batch
-			keys  [][]byte
-		)
-
-		for i := 0; i < 1000; i++ {
+	// create from ground
+	if b == nil {
+		for i := 0; i < size; i++ {
 			key := blake2b.Sum256([]byte("key" + string(n) + string(i)))
-			keys = append(keys, key[:])
-		}
-
-		sortBytes(keys)
-
-		for _, key := range keys {
-			value := bytes.Repeat([]byte("x"), RandIntn(1000))
-			op := &Op{Put, key, value}
+			val := bytes.Repeat([]byte("x"), RandIntn(1000))
+			op := &OP{Put, key[:], val}
 			batch = append(batch, op)
 		}
 
-		return batch
+		return sortBatch(batch)
 	}
 
+	// update 1/2 and delete 1/20
+	for i := 0; i < size/2; i++ {
+		key1 := blake2b.Sum256([]byte("key" + string(n) + string(i)))
+		val1 := bytes.Repeat([]byte("x"), RandIntn(1000))
+		op1 := &OP{Put, key1[:], val1}
+
+		if i%20 == 0 && b[i*2].O == Put {
+			key2 := b[i*2].K
+			op2 := &OP{O: Del, K: key2}
+
+			batch = append(batch, op1, op2)
+			continue
+		}
+
+		key2 := b[i*2].K
+		val2 := bytes.Repeat([]byte("x"), RandIntn(1000))
+		op2 := &OP{Put, key2[:], val2}
+		batch = append(batch, op2, op1)
+	}
+
+	return sortBatch(batch)
+}
+
+func BenchmarkNoCommit(b *testing.B) {
+	var (
+		batch Batch
+		size  int = 1000
+	)
+
+	m, _ := newMerk()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
 	for n := 0; n < b.N; n++ {
-		if _, err := m.applyUnchecked(batchBuiler(n)); err != nil {
+		batch = buildBatch(batch, size, n)
+		if _, err := m.applyUnchecked(batch); err != nil {
+			// if _, err := m.apply(batch); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
+
+// func BenchmarkCommit(b *testing.B) {
+// 	m, _ := newMerk()
+
+// 	batchBuilder := func(n int) Batch {
+// 		var (
+// 			batch Batch
+// 			keys  [][]byte
+// 		)
+
+// 		for i := 0; i < 100_000; i++ {
+// 			key := blake2b.Sum256([]byte("key" + string(n) + string(i)))
+// 			keys = append(keys, key[:])
+// 		}
+
+// 		sortBytes(keys)
+
+// 		for _, key := range keys {
+// 			value := bytes.Repeat([]byte("x"), RandIntn(1000))
+// 			op := &OP{Put, key, value}
+// 			batch = append(batch, op)
+// 		}
+
+// 		return batch
+// 	}
+
+// 	batch := batchBuilder(0)
+// 	b.ReportAllocs()
+// 	b.ResetTimer()
+
+// 	for n := 0; n < b.N; n++ {
+// 		if _, err := m.applyUnchecked(batch); err != nil {
+// 			b.Fatal(err)
+// 		}
+// 	}
+// }

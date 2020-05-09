@@ -25,10 +25,10 @@ func binarySearchBy(needle []byte, batch Batch) (bool, int) {
 	for low <= high {
 		median := (low + high) / 2
 
-		if bytes.Compare(batch[median].key, needle) == 0 {
+		if bytes.Compare(batch[median].K, needle) == 0 {
 			return true, median
 			// a < b
-		} else if bytes.Compare(batch[median].key, needle) == -1 {
+		} else if bytes.Compare(batch[median].K, needle) == -1 {
 			low = median + 1
 		} else {
 			high = median - 1

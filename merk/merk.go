@@ -73,20 +73,20 @@ func (m *Merk) apply(batch Batch) ([][]byte, error) {
 	var prevKey []byte
 	for i := 0; i < len(batch); i++ {
 		// ensure keys in batch are sorted and unique
-		if bytes.Compare(batch[i].key, prevKey) == -1 {
+		if bytes.Compare(batch[i].K, prevKey) == -1 {
 			return nil, errors.New("keys in batch must be sorted")
-		} else if bytes.Equal(batch[i].key, prevKey) {
+		} else if bytes.Equal(batch[i].K, prevKey) {
 			return nil, errors.New("keys in batch must be unique")
 		}
 		// ensure size of keys and values less than limit
-		if uint32(len(batch[i].key)) > uint32(math.MaxUint32) {
-			return nil, fmt.Errorf("Too long, key: %v ", batch[i].key)
+		if uint32(len(batch[i].K)) > uint32(math.MaxUint32) {
+			return nil, fmt.Errorf("Too long, key: %v ", batch[i].K)
 		}
-		if uint32(len(batch[i].val)) > uint32(math.MaxUint32) {
-			return nil, fmt.Errorf("too long, value: %v ", batch[i].val)
+		if uint32(len(batch[i].V)) > uint32(math.MaxUint32) {
+			return nil, fmt.Errorf("too long, value: %v ", batch[i].V)
 		}
 
-		prevKey = batch[i].key
+		prevKey = batch[i].K
 	}
 
 	return m.applyUnchecked(batch)
@@ -99,11 +99,11 @@ func (m *Merk) applyUnchecked(batch Batch) ([][]byte, error) {
 	sortBytes(deletedKeys)
 
 	// ensure tree valance
-	// if m.tree != nil {
-	// 	if err := m.tree.verify(); err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+	if m.tree != nil {
+		if err := m.tree.verify(); err != nil {
+			return nil, err
+		}
+	}
 
 	// commit if db exist
 	if gDB != nil {

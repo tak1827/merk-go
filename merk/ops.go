@@ -3,23 +3,24 @@ package merk
 import (
 	"fmt"
 	"math"
-	"sync"
+	// "sync"
+	"sort"
 )
 
-type OpType uint8
+type OPType uint8
 
 const (
-	Put OpType = 1 << iota
-	Delete
+	Put OPType = 1 << iota
+	Del
 )
 
-type Op struct {
-	op  OpType
-	key []byte
-	val []byte
+type OP struct {
+	O OPType
+	K []byte
+	V []byte
 }
 
-type Batch []*Op
+type Batch []*OP
 
 func applyTo(maybeTree *Tree, batch Batch) (*Tree, [][]byte) {
 	var deletedKeys [][]byte
@@ -40,10 +41,10 @@ func build(batch Batch) *Tree {
 	}
 
 	var midIndex int = len(batch) / 2
-	var midKey []byte = batch[midIndex].key
-	var midOp OpType = batch[midIndex].op
-	var midValue []byte = batch[midIndex].val
-	if midOp == Delete {
+	var midKey []byte = batch[midIndex].K
+	var midOP OPType = batch[midIndex].O
+	var midValue []byte = batch[midIndex].V
+	if midOP == Del {
 		panic(fmt.Sprintf("tried to delete non-existent key %v", midKey))
 	}
 
@@ -62,10 +63,10 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte) {
 	found, mid := binarySearchBy(tree.key(), batch)
 
 	if found {
-		switch batch[mid].op {
+		switch batch[mid].O {
 		case Put:
-			tree.withValue(batch[mid].val)
-		case Delete:
+			tree.withValue(batch[mid].V)
+		case Del:
 			maybeTree := remove(tree)
 
 			leftBatch = batch[:mid]
@@ -95,7 +96,7 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte)
 	var (
 		leftBatch, rightBatch Batch
 		deletedKeys           [][]byte
-		wg                    sync.WaitGroup
+		// wg                    sync.WaitGroup
 	)
 
 	leftBatch = batch[:mid]
@@ -106,35 +107,35 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte)
 	}
 
 	if len(leftBatch) != 0 {
-		wg.Add(1)
+		// wg.Add(1)
 
-		go func() {
-			defer wg.Done()
+		// go func() {
+		// 	defer wg.Done()
 
-			tree.walk(true, func(maybeLeft *Tree) *Tree {
-				maybeLeft, deletedKeysLeft := applyTo(maybeLeft, leftBatch)
+		tree.walk(true, func(maybeLeft *Tree) *Tree {
+			maybeLeft, deletedKeysLeft := applyTo(maybeLeft, leftBatch)
 
-				deletedKeys = append(deletedKeys, deletedKeysLeft...)
-				return maybeLeft
-			})
-		}()
+			deletedKeys = append(deletedKeys, deletedKeysLeft...)
+			return maybeLeft
+		})
+		// }()
 	}
 
 	if len(rightBatch) != 0 {
-		wg.Add(1)
+		// wg.Add(1)
 
-		go func() {
-			defer wg.Done()
+		// go func() {
+		// 	defer wg.Done()
 
-			tree.walk(false, func(maybeRight *Tree) *Tree {
-				maybeRight, deletedKeysRight := applyTo(maybeRight, rightBatch)
-				deletedKeys = append(deletedKeys, deletedKeysRight...)
-				return maybeRight
-			})
-		}()
+		tree.walk(false, func(maybeRight *Tree) *Tree {
+			maybeRight, deletedKeysRight := applyTo(maybeRight, rightBatch)
+			deletedKeys = append(deletedKeys, deletedKeysRight...)
+			return maybeRight
+		})
+		// }()
 	}
 
-	wg.Wait()
+	// wg.Wait()
 
 	return maybeBalance(tree), deletedKeys
 }
@@ -256,4 +257,11 @@ func removeEdge(t *Tree, isLeft bool) (*Tree, *Tree) {
 		tree = t.detach(!isLeft)
 		return t, tree
 	}
+}
+
+func sortBatch(b Batch) Batch {
+	sort.SliceStable(b, func(i, j int) bool {
+		return string(b[i].K) < string(b[j].K)
+	})
+	return b
 }

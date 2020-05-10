@@ -3,7 +3,6 @@ package merk
 import (
 	"fmt"
 	"math"
-	"sync"
 	"sort"
 )
 
@@ -50,7 +49,7 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte, error) {
 	var (
 		deletedKeys, deletedKeysRight [][]byte
 		leftBatch, rightBatch         Batch
-		err error
+		err                           error
 	)
 
 	found, mid := binarySearchBy(tree.key(), batch)
@@ -93,7 +92,6 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 	var (
 		leftBatch, rightBatch Batch
 		deletedKeys           [][]byte
-		wg                    sync.WaitGroup
 	)
 
 	leftBatch = batch[:mid]
@@ -103,41 +101,51 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 		rightBatch = batch[mid:]
 	}
 
+	chErr := make(chan error, 2)
+
 	if len(leftBatch) != 0 {
-		wg.Add(1)
-
 		go func() {
-			defer wg.Done()
 
-		if err := tree.walk(true, func(maybeLeft *Tree) (*Tree, error) {
-			maybeLeft, deletedKeysLeft, err  := applyTo(maybeLeft, leftBatch)
-			deletedKeys = append(deletedKeys, deletedKeysLeft...)
-			return maybeLeft, err
-		}); err != nil {
-			fmt.Errorf("error while concurency, %w", err)
-			// return nil, nil, err
-		}
+			err := tree.walk(true, func(maybeLeft *Tree) (*Tree, error) {
+				maybeLeft, deletedKeysLeft, err := applyTo(maybeLeft, leftBatch)
+				deletedKeys = append(deletedKeys, deletedKeysLeft...)
+				return maybeLeft, err
+			})
+
+			// if err != nil {
+			// 	return nil, nil, err
+			// }
+			chErr <- err
 		}()
+	} else {
+		chErr <- nil
 	}
 
 	if len(rightBatch) != 0 {
-		wg.Add(1)
-
 		go func() {
-			defer wg.Done()
 
-		if err := tree.walk(false, func(maybeRight *Tree) (*Tree, error) {
-			maybeRight, deletedKeysRight, err := applyTo(maybeRight, rightBatch)
-			deletedKeys = append(deletedKeys, deletedKeysRight...)
-			return maybeRight, err
-		}); err != nil {
-			fmt.Errorf("error while concurency, %w", err)
-			// return nil, nil, err
-		}
+			err := tree.walk(false, func(maybeRight *Tree) (*Tree, error) {
+				maybeRight, deletedKeysRight, err := applyTo(maybeRight, rightBatch)
+				deletedKeys = append(deletedKeys, deletedKeysRight...)
+				return maybeRight, err
+			})
+
+			// if err != nil {
+			// 	return nil, nil, err
+			// }
+			chErr <- err
 		}()
+	} else {
+		chErr <- nil
 	}
 
-	wg.Wait()
+	for i := 0; i < 2; i++ {
+		if err := <-chErr; err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// wg.Wait()
 
 	return maybeBalance(tree), deletedKeys, nil
 }
@@ -197,21 +205,21 @@ func remove(tree *Tree) *Tree {
 	}
 
 	// no child
-  if !hasLeft && !hasRight {
-    return nil
-  }
+	if !hasLeft && !hasRight {
+		return nil
+	}
 
 	isLeft = tree.childHeight(true) > tree.childHeight(false)
 
 	// single child
-  if !(hasLeft && hasRight) {
-    return tree.detachExpect(isLeft)
-  }
+	if !(hasLeft && hasRight) {
+		return tree.detachExpect(isLeft)
+	}
 
-  // two children, promote edge of taller child
-  tallChild := tree.detachExpect(isLeft)
-  shortChild := tree.detachExpect(!isLeft)
-  return promoteEdge(tallChild, shortChild, !isLeft)
+	// two children, promote edge of taller child
+	tallChild := tree.detachExpect(isLeft)
+	shortChild := tree.detachExpect(!isLeft)
+	return promoteEdge(tallChild, shortChild, !isLeft)
 }
 
 func promoteEdge(tree, attach *Tree, isLeft bool) *Tree {

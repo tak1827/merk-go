@@ -5,6 +5,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/blake2b"
 	"testing"
+	// "fmt"
+	"math"
+	"strconv"
 	// "github.com/davecgh/go-spew/spew"
 )
 
@@ -167,13 +170,13 @@ func buildMerkWithDB() *Merk {
 	return m
 }
 
-func buildBatch(b Batch, size, n int) Batch {
+func buildBatch(b Batch, size int) Batch {
 	var batch Batch
 
 	// create from ground
 	if b == nil {
 		for i := 0; i < size; i++ {
-			key := blake2b.Sum256([]byte("key" + string(n) + string(i)))
+			key := blake2b.Sum256([]byte("key" + strconv.Itoa(i) + strconv.Itoa(RandIntn(math.MaxUint32))))
 			val := bytes.Repeat([]byte("x"), RandIntn(1000))
 			op := &OP{Put, key[:], val}
 			batch = append(batch, op)
@@ -184,7 +187,7 @@ func buildBatch(b Batch, size, n int) Batch {
 
 	// update 1/2 and delete 1/20
 	for i := 0; i < size/2; i++ {
-		key1 := blake2b.Sum256([]byte("key" + string(n) + string(i)))
+		key1 := blake2b.Sum256([]byte("key" + strconv.Itoa(i) + strconv.Itoa(RandIntn(math.MaxUint32))))
 		val1 := bytes.Repeat([]byte("x"), RandIntn(1000))
 		op1 := &OP{Put, key1[:], val1}
 
@@ -208,7 +211,7 @@ func buildBatch(b Batch, size, n int) Batch {
 func BenchmarkNoCommit(b *testing.B) {
 	var (
 		batch Batch
-		size  int = 1000
+		size  int = 100_000
 	)
 
 	m := &Merk{}
@@ -218,11 +221,11 @@ func BenchmarkNoCommit(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		b.StopTimer()
-		batch = buildBatch(batch, size, n)
+		batch = buildBatch(batch, size)
 		b.StartTimer()
 
-		if _, err := m.ApplyUnchecked(batch); err != nil {
-			// if _, err := m.Apply(batch); err != nil {
+		// if _, err := m.ApplyUnchecked(batch); err != nil {
+		if _, err := m.Apply(batch); err != nil {
 			b.Fatal(err)
 		}
 	}

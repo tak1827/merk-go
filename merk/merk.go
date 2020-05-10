@@ -71,7 +71,7 @@ func (m *Merk) Apply(batch Batch) ([][]byte, error) {
 		if bytes.Compare(batch[i].K, prevKey) == -1 {
 			return nil, errors.New("keys in batch must be sorted")
 		} else if bytes.Equal(batch[i].K, prevKey) {
-			return nil, errors.New("keys in batch must be unique")
+			return nil, fmt.Errorf("keys in batch must be unique, %v", batch[i].K)
 		}
 		// ensure size of keys and values less than limit
 		if uint32(len(batch[i].K)) > uint32(math.MaxUint32) {
@@ -90,7 +90,7 @@ func (m *Merk) Apply(batch Batch) ([][]byte, error) {
 func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 	var (
 		deletedKeys [][]byte
-		err error
+		err         error
 	)
 
 	if batch == nil {

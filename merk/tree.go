@@ -70,7 +70,7 @@ func (t *Tree) child(isLeft bool) *Tree {
 	if l.linkType() == PrunedLink {
 		child, err := gDB.fetchTree(l.key())
 		if err != nil {
-			fmt.Errorf("failed to fetch node: %w", err)
+			panic(fmt.Sprintf("failed to fetch node: %v", err))
 		}
 		return child
 	}
@@ -143,7 +143,7 @@ func (t *Tree) detach(isLeft bool) *Tree {
 	if slot.linkType() == PrunedLink {
 		child, err := gDB.fetchTree(slot.key())
 		if err != nil {
-			fmt.Errorf("failed to fetch node: %w", err)
+			panic(fmt.Sprintf("failed to fetch node: %v", err))
 		}
 		return child
 	}
@@ -155,7 +155,7 @@ func (t *Tree) detachExpect(isLeft bool) (maybeChild *Tree) {
 	maybeChild = t.detach(isLeft)
 
 	if maybeChild == nil {
-		fmt.Errorf("Expected tree to have %v child, but got Nil", sideToStr(isLeft))
+		panic(fmt.Sprintf("Expected tree to have %v child, but got Nil", sideToStr(isLeft)))
 	}
 
 	return
@@ -163,7 +163,7 @@ func (t *Tree) detachExpect(isLeft bool) (maybeChild *Tree) {
 
 func (t *Tree) walk(isLeft bool, f func(tree *Tree) (*Tree, error)) error {
 	appliedTree, err := f(t.detach(isLeft))
-	if err !=nil {
+	if err != nil {
 		return err
 	}
 

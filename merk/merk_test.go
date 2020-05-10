@@ -217,7 +217,10 @@ func BenchmarkNoCommit(b *testing.B) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
+		b.StopTimer()
 		batch = buildBatch(batch, size, n)
+		b.StartTimer()
+
 		if _, err := m.ApplyUnchecked(batch); err != nil {
 			// if _, err := m.Apply(batch); err != nil {
 			b.Fatal(err)

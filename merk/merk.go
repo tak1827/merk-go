@@ -88,8 +88,15 @@ func (m *Merk) Apply(batch Batch) ([][]byte, error) {
 }
 
 func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
-	var deletedKeys [][]byte
-	m.tree, deletedKeys = applyTo(m.tree, batch)
+	var (
+		deletedKeys [][]byte
+		err error
+	)
+
+	m.tree, deletedKeys, err = applyTo(m.tree, batch)
+	if err != nil {
+		return nil, err
+	}
 
 	sortBytes(deletedKeys)
 

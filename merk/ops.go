@@ -22,22 +22,31 @@ type OP struct {
 
 type Batch []*OP
 
-func applyTo(maybeTree *Tree, batch Batch) (*Tree, [][]byte) {
-	var deletedKeys [][]byte
+func applyTo(maybeTree *Tree, batch Batch) (*Tree, [][]byte, error) {
+	var (
+		deletedKeys [][]byte
+		err error
+	)
+
 	if batch != nil && maybeTree != nil {
-		maybeTree, deletedKeys = apply(maybeTree, batch)
+		maybeTree, deletedKeys, err = apply(maybeTree, batch)
+		if err != nil {
+			return nil, deletedKeys, err
+		}
+
 	} else if batch == nil {
 		// Do nothing
 	} else {
-		return build(batch), nil
+		t, err := build(batch)
+		return t, nil, err
 	}
 
-	return maybeTree, deletedKeys
+	return maybeTree, deletedKeys, nil
 }
 
-func build(batch Batch) *Tree {
+func build(batch Batch) (*Tree, error) {
 	if batch == nil {
-		return nil
+		return nil, nil
 	}
 
 	var midIndex int = len(batch) / 2
@@ -45,27 +54,26 @@ func build(batch Batch) *Tree {
 	var midOP OPType = batch[midIndex].O
 	var midValue []byte = batch[midIndex].V
 	if midOP == Del {
-		panic(fmt.Sprintf("tried to delete non-existent key %v", midKey))
+		return nil, fmt.Errorf("tried to delete non-existent key %v", midKey)
 	}
 
 	midTree := newTree(midKey, midValue)
-	midTree, _ = recurse(midTree, batch, midIndex, true)
+	midTree, _, err := recurse(midTree, batch, midIndex, true)
 
-	return midTree
+	return midTree, err
 }
 
-func apply(tree *Tree, batch Batch) (*Tree, [][]byte) {
+func apply(tree *Tree, batch Batch) (*Tree, [][]byte, error) {
 	var (
 		deletedKeys, deletedKeysRight [][]byte
 		leftBatch, rightBatch         Batch
+		err error
 	)
 
 	found, mid := binarySearchBy(tree.key(), batch)
 
 	if found {
 		switch batch[mid].O {
-		case Put:
-			tree.withValue(batch[mid].V)
 		case Del:
 			maybeTree := remove(tree)
 
@@ -73,17 +81,25 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte) {
 			rightBatch = batch[mid+1:]
 
 			if len(leftBatch) != 0 {
-				maybeTree, deletedKeys = applyTo(maybeTree, leftBatch)
+				maybeTree, deletedKeys, err = applyTo(maybeTree, leftBatch)
+				if err != nil {
+					return nil, nil, err
+				}
 			}
+
 			if len(rightBatch) != 0 {
-				maybeTree, deletedKeysRight = applyTo(maybeTree, rightBatch)
+				maybeTree, deletedKeysRight, err = applyTo(maybeTree, rightBatch)
+				if err != nil {
+					return nil, nil, err
+				}
 				deletedKeys = append(deletedKeys, deletedKeysRight...)
 			}
+
 			deletedKeys = append(deletedKeys, tree.key())
 
-			return maybeTree, deletedKeys
+			return maybeTree, deletedKeys, nil
 		default:
-			panic("Don't exist opcode")
+			tree.withValue(batch[mid].V)
 		}
 	}
 
@@ -92,7 +108,7 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte) {
 	return recurse(tree, batch, mid, exclusive)
 }
 
-func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte) {
+func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte, error) {
 	var (
 		leftBatch, rightBatch Batch
 		deletedKeys           [][]byte
@@ -112,12 +128,17 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte)
 		// go func() {
 		// 	defer wg.Done()
 
-		tree.walk(true, func(maybeLeft *Tree) *Tree {
-			maybeLeft, deletedKeysLeft := applyTo(maybeLeft, leftBatch)
+		if err := tree.walk(true, func(maybeLeft *Tree) (*Tree, error) {
+			maybeLeft, deletedKeysLeft, err  := applyTo(maybeLeft, leftBatch)
+			if err != nil {
+				return nil, err
+			}
 
 			deletedKeys = append(deletedKeys, deletedKeysLeft...)
-			return maybeLeft
-		})
+			return maybeLeft, nil
+		}); err != nil {
+			return nil, nil, err
+		}
 		// }()
 	}
 
@@ -127,17 +148,23 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte)
 		// go func() {
 		// 	defer wg.Done()
 
-		tree.walk(false, func(maybeRight *Tree) *Tree {
-			maybeRight, deletedKeysRight := applyTo(maybeRight, rightBatch)
+		if err := tree.walk(false, func(maybeRight *Tree) (*Tree, error) {
+			maybeRight, deletedKeysRight, err := applyTo(maybeRight, rightBatch)
+			if err != nil {
+				return nil, err
+			}
+
 			deletedKeys = append(deletedKeys, deletedKeysRight...)
-			return maybeRight
-		})
+			return maybeRight, nil
+		}); err != nil {
+			return nil, nil, err
+		}
 		// }()
 	}
 
 	// wg.Wait()
 
-	return maybeBalance(tree), deletedKeys
+	return maybeBalance(tree), deletedKeys, nil
 }
 
 func balanceFactor(tree *Tree) int8 {
@@ -165,7 +192,6 @@ func maybeBalance(tree *Tree) *Tree {
 
 func rotate(tree *Tree, isLeft bool) *Tree {
 	var (
-		err             error
 		child           *Tree
 		maybeGrandchild *Tree
 	)
@@ -174,17 +200,11 @@ func rotate(tree *Tree, isLeft bool) *Tree {
 	maybeGrandchild = child.detach(!isLeft)
 
 	if maybeGrandchild != nil {
-		err = tree.attach(isLeft, maybeGrandchild)
-		if err != nil {
-			fmt.Errorf("fialed to attach grand child: %w", err)
-		}
+		tree.attach(isLeft, maybeGrandchild)
 	}
 	tree = maybeBalance(tree)
 
-	err = child.attach(!isLeft, tree)
-	if err != nil {
-		fmt.Errorf("fialed to attach tree: %w", err)
-	}
+	child.attach(!isLeft, tree)
 	child = maybeBalance(child)
 
 	return child
@@ -220,22 +240,12 @@ func remove(tree *Tree) *Tree {
 }
 
 func promoteEdge(tree, attach *Tree, isLeft bool) *Tree {
-	var (
-		edge, maybeChild *Tree
-		err              error
-	)
+	var edge, maybeChild *Tree
 
 	edge, maybeChild = removeEdge(tree, isLeft)
 
-	err = edge.attach(!isLeft, maybeChild)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	err = edge.attach(isLeft, attach)
-	if err != nil {
-		panic(err.Error())
-	}
+	edge.attach(!isLeft, maybeChild)
+	edge.attach(isLeft, attach)
 
 	return maybeBalance(edge)
 }

@@ -21,7 +21,7 @@ func TestBuild(t *testing.T) {
 
 	b = append(b, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
 
-	tree := build(b)
+	tree, _ := build(b)
 
 	assert.EqualValues(t, []byte("5"), tree.key())
 	assert.EqualValues(t, []byte("2"), tree.child(true).key())

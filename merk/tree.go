@@ -4,7 +4,6 @@ import (
 	// "sync"
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"github.com/valyala/bytebufferpool"
 	"math"
@@ -72,7 +71,7 @@ func (t *Tree) child(isLeft bool) *Tree {
 	if l.linkType() == PrunedLink {
 		child, err := gDB.fetchTree(l.key())
 		if err != nil {
-			panic(fmt.Sprintf("failed to fetch node: %v", err))
+			fmt.Errorf("failed to fetch node: %w", err)
 		}
 		return child
 	}
@@ -115,23 +114,23 @@ func (t *Tree) balanceFactor() int8 {
 	return int8(t.childHeight(false) - t.childHeight(true))
 }
 
-func (t *Tree) attach(isLeft bool, maybeChild *Tree) error {
+func (t *Tree) attach(isLeft bool, maybeChild *Tree) {
 	if t == nil || maybeChild == nil {
-		return nil
+		return
 	}
 
 	if bytes.Equal(maybeChild.key(), t.key()) {
-		return errors.New("tried to attach tree with same key")
+		panic(fmt.Sprintf("BUG: tried to attach tree with same key, %v", t.key()))
 	}
 
 	if t.link(isLeft) != nil {
-		return fmt.Errorf("tried to attach to %v tree slot, but it is already Some", sideToStr(isLeft))
+		panic(fmt.Sprintf("BUG: tried to attach to %v tree slot, but it is already Some", sideToStr(isLeft)))
 	}
 
 	slot := fromModifiedTree(maybeChild)
 	t.setLink(isLeft, slot)
 
-	return nil
+	return
 }
 
 func (t *Tree) detach(isLeft bool) *Tree {
@@ -145,7 +144,7 @@ func (t *Tree) detach(isLeft bool) *Tree {
 	if slot.linkType() == PrunedLink {
 		child, err := gDB.fetchTree(slot.key())
 		if err != nil {
-			panic(fmt.Sprintf("Failed to fetch node: %v", err))
+			fmt.Errorf("failed to fetch node: %w", err)
 		}
 		return child
 	}
@@ -157,15 +156,23 @@ func (t *Tree) detachExpect(isLeft bool) (maybeChild *Tree) {
 	maybeChild = t.detach(isLeft)
 
 	if maybeChild == nil {
-		panic(fmt.Sprintf("Expected tree to have %v child, but got Nil", sideToStr(isLeft)))
+		fmt.Errorf("Expected tree to have %v child, but got Nil", sideToStr(isLeft))
 	}
 
 	return
 }
 
-func (t *Tree) walk(isLeft bool, f func(tree *Tree) *Tree) {
+func (t *Tree) walk(isLeft bool, f func(tree *Tree) (*Tree, error)) error {
 	var maybeChild *Tree = t.detach(isLeft)
-	t.attach(isLeft, f(maybeChild))
+
+	appliedTree, err := f(maybeChild)
+	if err !=nil {
+		return err
+	}
+
+	t.attach(isLeft, appliedTree)
+
+	return nil
 }
 
 func (t *Tree) walkExpect(isLeft bool, f func(tree *Tree) *Tree) {

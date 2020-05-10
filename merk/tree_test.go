@@ -55,11 +55,7 @@ func TestUnMarshalTree(t *testing.T) {
 func TestTreeCommit(t *testing.T) {
 	tree := buildTree()
 
-	openDB(testDBName)
-	wb := gDB.newBatch()
-	defer wb.Cancel()
-
-	committer := newCommitter(wb, tree.height(), 1)
+	committer := newCommitter(nil, tree.height(), 1)
 
 	tree.commit(committer)
 

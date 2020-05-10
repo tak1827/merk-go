@@ -3,7 +3,7 @@ package merk
 import (
 	"fmt"
 	"math"
-	// "sync"
+	"sync"
 	"sort"
 )
 
@@ -93,7 +93,7 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 	var (
 		leftBatch, rightBatch Batch
 		deletedKeys           [][]byte
-		// wg                    sync.WaitGroup
+		wg                    sync.WaitGroup
 	)
 
 	leftBatch = batch[:mid]
@@ -104,38 +104,40 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 	}
 
 	if len(leftBatch) != 0 {
-		// wg.Add(1)
+		wg.Add(1)
 
-		// go func() {
-		// 	defer wg.Done()
+		go func() {
+			defer wg.Done()
 
 		if err := tree.walk(true, func(maybeLeft *Tree) (*Tree, error) {
 			maybeLeft, deletedKeysLeft, err  := applyTo(maybeLeft, leftBatch)
 			deletedKeys = append(deletedKeys, deletedKeysLeft...)
 			return maybeLeft, err
 		}); err != nil {
-			return nil, nil, err
+			fmt.Errorf("error while concurency, %w", err)
+			// return nil, nil, err
 		}
-		// }()
+		}()
 	}
 
 	if len(rightBatch) != 0 {
-		// wg.Add(1)
+		wg.Add(1)
 
-		// go func() {
-		// 	defer wg.Done()
+		go func() {
+			defer wg.Done()
 
 		if err := tree.walk(false, func(maybeRight *Tree) (*Tree, error) {
 			maybeRight, deletedKeysRight, err := applyTo(maybeRight, rightBatch)
 			deletedKeys = append(deletedKeys, deletedKeysRight...)
 			return maybeRight, err
 		}); err != nil {
-			return nil, nil, err
+			fmt.Errorf("error while concurency, %w", err)
+			// return nil, nil, err
 		}
-		// }()
+		}()
 	}
 
-	// wg.Wait()
+	wg.Wait()
 
 	return maybeBalance(tree), deletedKeys, nil
 }

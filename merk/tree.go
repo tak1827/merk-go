@@ -46,9 +46,8 @@ func (t *Tree) kvHash() Hash {
 func (t *Tree) link(isLeft bool) Link {
 	if isLeft {
 		return t.left
-	} else {
-		return t.right
 	}
+	return t.right
 }
 
 func (t *Tree) setLink(isLeft bool, link Link) {
@@ -57,9 +56,9 @@ func (t *Tree) setLink(isLeft bool, link Link) {
 
 	if isLeft {
 		t.left = link
-	} else {
-		t.right = link
+		return
 	}
+	t.right = link
 }
 
 func (t *Tree) child(isLeft bool) *Tree {
@@ -115,7 +114,7 @@ func (t *Tree) balanceFactor() int8 {
 }
 
 func (t *Tree) attach(isLeft bool, maybeChild *Tree) {
-	if t == nil || maybeChild == nil {
+	if maybeChild == nil {
 		return
 	}
 
@@ -163,9 +162,7 @@ func (t *Tree) detachExpect(isLeft bool) (maybeChild *Tree) {
 }
 
 func (t *Tree) walk(isLeft bool, f func(tree *Tree) (*Tree, error)) error {
-	var maybeChild *Tree = t.detach(isLeft)
-
-	appliedTree, err := f(maybeChild)
+	appliedTree, err := f(t.detach(isLeft))
 	if err !=nil {
 		return err
 	}

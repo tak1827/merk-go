@@ -23,32 +23,15 @@ type OP struct {
 type Batch []*OP
 
 func applyTo(maybeTree *Tree, batch Batch) (*Tree, [][]byte, error) {
-	var (
-		deletedKeys [][]byte
-		err error
-	)
-
-	if batch != nil && maybeTree != nil {
-		maybeTree, deletedKeys, err = apply(maybeTree, batch)
-		if err != nil {
-			return nil, deletedKeys, err
-		}
-
-	} else if batch == nil {
-		// Do nothing
-	} else {
+	if maybeTree == nil {
 		t, err := build(batch)
 		return t, nil, err
 	}
 
-	return maybeTree, deletedKeys, nil
+	return apply(maybeTree, batch)
 }
 
 func build(batch Batch) (*Tree, error) {
-	if batch == nil {
-		return nil, nil
-	}
-
 	var midIndex int = len(batch) / 2
 	var midKey []byte = batch[midIndex].K
 	var midOP OPType = batch[midIndex].O
@@ -92,9 +75,9 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte, error) {
 				if err != nil {
 					return nil, nil, err
 				}
-				deletedKeys = append(deletedKeys, deletedKeysRight...)
 			}
 
+			deletedKeys = append(deletedKeys, deletedKeysRight...)
 			deletedKeys = append(deletedKeys, tree.key())
 
 			return maybeTree, deletedKeys, nil
@@ -103,9 +86,7 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte, error) {
 		}
 	}
 
-	var exclusive bool = found
-
-	return recurse(tree, batch, mid, exclusive)
+	return recurse(tree, batch, mid, found)
 }
 
 func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte, error) {
@@ -130,12 +111,8 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 
 		if err := tree.walk(true, func(maybeLeft *Tree) (*Tree, error) {
 			maybeLeft, deletedKeysLeft, err  := applyTo(maybeLeft, leftBatch)
-			if err != nil {
-				return nil, err
-			}
-
 			deletedKeys = append(deletedKeys, deletedKeysLeft...)
-			return maybeLeft, nil
+			return maybeLeft, err
 		}); err != nil {
 			return nil, nil, err
 		}
@@ -150,12 +127,8 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 
 		if err := tree.walk(false, func(maybeRight *Tree) (*Tree, error) {
 			maybeRight, deletedKeysRight, err := applyTo(maybeRight, rightBatch)
-			if err != nil {
-				return nil, err
-			}
-
 			deletedKeys = append(deletedKeys, deletedKeysRight...)
-			return maybeRight, nil
+			return maybeRight, err
 		}); err != nil {
 			return nil, nil, err
 		}
@@ -211,32 +184,32 @@ func rotate(tree *Tree, isLeft bool) *Tree {
 }
 
 func remove(tree *Tree) *Tree {
-	var (
-		hasLeft, hasRight, isLeft bool
-		maybeTree                 *Tree
-	)
+	var hasLeft, hasRight, isLeft bool
 
 	if tree.link(true) != nil {
 		hasLeft = true
 	}
+
 	if tree.link(false) != nil {
 		hasRight = true
 	}
+
+	// no child
+  if !hasLeft && !hasRight {
+    return nil
+  }
+
 	isLeft = tree.childHeight(true) > tree.childHeight(false)
 
-	if hasLeft && hasRight {
-		// two children, promote edge of taller child
-		tallChild := tree.detachExpect(isLeft)   // 88
-		shortChild := tree.detachExpect(!isLeft) // 50
-		maybeTree = promoteEdge(tallChild, shortChild, !isLeft)
-	} else if hasLeft || hasRight {
-		// single child, promote it
-		maybeTree = tree.detachExpect(isLeft)
-	} else {
-		// no child
-	}
+	// single child
+  if !(hasLeft && hasRight) {
+    return tree.detachExpect(isLeft)
+  }
 
-	return maybeTree
+  // two children, promote edge of taller child
+  tallChild := tree.detachExpect(isLeft)
+  shortChild := tree.detachExpect(!isLeft)
+  return promoteEdge(tallChild, shortChild, !isLeft)
 }
 
 func promoteEdge(tree, attach *Tree, isLeft bool) *Tree {
@@ -253,20 +226,20 @@ func promoteEdge(tree, attach *Tree, isLeft bool) *Tree {
 func removeEdge(t *Tree, isLeft bool) (*Tree, *Tree) {
 	var tree, edge, maybeChild *Tree
 
-	if t != nil && t.link(isLeft) != nil {
-		child := t.detachExpect(isLeft)
-		tree = t
-
-		edge, maybeChild = removeEdge(child, isLeft)
-
-		tree.attach(isLeft, maybeChild)
-		tree = maybeBalance(tree)
-
-		return edge, tree
-	} else {
+	if t.link(isLeft) == nil {
 		tree = t.detach(!isLeft)
 		return t, tree
 	}
+
+	child := t.detachExpect(isLeft)
+	tree = t
+
+	edge, maybeChild = removeEdge(child, isLeft)
+
+	tree.attach(isLeft, maybeChild)
+	tree = maybeBalance(tree)
+
+	return edge, tree
 }
 
 func sortBatch(b Batch) Batch {

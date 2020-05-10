@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-// TOOD: Change to name
+// TOOD: Make changeable from merk
 const (
 	DefaultDBPath = "../storage/"
 	DefaultDBName = "merkdb"

@@ -93,6 +93,10 @@ func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 		err error
 	)
 
+	if batch == nil {
+		return nil, errors.New("empty batch")
+	}
+
 	m.tree, deletedKeys, err = applyTo(m.tree, batch)
 	if err != nil {
 		return nil, err
@@ -101,11 +105,11 @@ func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 	sortBytes(deletedKeys)
 
 	// ensure tree valance
-	if m.tree != nil {
-		if err := m.tree.verify(); err != nil {
-			return nil, err
-		}
-	}
+	// if m.tree != nil {
+	// 	if err := m.tree.verify(); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	// commit if db exist
 	if gDB != nil {

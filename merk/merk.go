@@ -12,12 +12,7 @@ type Merk struct {
 	tree *Tree
 }
 
-func newMerk() (*Merk, error) {
-	return &Merk{}, nil
-}
-
-// Note: Keep merk single
-func newMarkWithDB(name string) (*Merk, error) {
+func NewMark(name string) (*Merk, error) {
 	if err := openDB(name); err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
@@ -25,7 +20,7 @@ func newMarkWithDB(name string) (*Merk, error) {
 	topKey, err := gDB.getItem(RootKey)
 	if err != nil {
 		if strings.Contains(err.Error(), "Key not found") {
-			return newMerk()
+			return &Merk{}, nil
 		}
 		return nil, err
 	}
@@ -38,7 +33,7 @@ func newMarkWithDB(name string) (*Merk, error) {
 	return &Merk{tree}, nil
 }
 
-func (m *Merk) get(key []byte) []byte {
+func (m *Merk) Get(key []byte) []byte {
 	if m.tree == nil {
 		return nil // empty tree
 	}
@@ -61,7 +56,7 @@ func (m *Merk) get(key []byte) []byte {
 	return nil
 }
 
-func (m *Merk) rootHash() Hash {
+func (m *Merk) RootHash() Hash {
 	if m.tree != nil {
 		return m.tree.hash()
 	} else {
@@ -69,7 +64,7 @@ func (m *Merk) rootHash() Hash {
 	}
 }
 
-func (m *Merk) apply(batch Batch) ([][]byte, error) {
+func (m *Merk) Apply(batch Batch) ([][]byte, error) {
 	var prevKey []byte
 	for i := 0; i < len(batch); i++ {
 		// ensure keys in batch are sorted and unique
@@ -89,10 +84,10 @@ func (m *Merk) apply(batch Batch) ([][]byte, error) {
 		prevKey = batch[i].K
 	}
 
-	return m.applyUnchecked(batch)
+	return m.ApplyUnchecked(batch)
 }
 
-func (m *Merk) applyUnchecked(batch Batch) ([][]byte, error) {
+func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 	var deletedKeys [][]byte
 	m.tree, deletedKeys = applyTo(m.tree, batch)
 
@@ -107,42 +102,42 @@ func (m *Merk) applyUnchecked(batch Batch) ([][]byte, error) {
 
 	// commit if db exist
 	if gDB != nil {
-		m.commit(deletedKeys)
+		m.Commit(deletedKeys)
 	}
 
 	return deletedKeys, nil
 }
 
-func (m *Merk) commit(deletedKeys [][]byte) error {
-	batch := gDB.newBatch()
-	defer batch.Cancel()
+func (m *Merk) Commit(deletedKeys [][]byte) error {
+	wb := gDB.newBatch()
+	defer wb.Cancel()
 
 	tree := m.tree
 	if tree != nil {
-		committer := newCommitter(batch, tree.height(), DafaultLevels)
+		committer := newCommitter(wb, tree.height(), DafaultLevels)
 		if err := tree.commit(committer); err != nil {
 			return err
 		}
 
-		if err := batch.Set(RootKey, tree.key()); err != nil {
+		if err := wb.Set(RootKey, tree.key()); err != nil {
 			return err
 		}
 
 	} else {
 		// empty tree, delete root
-		if err := batch.Delete(RootKey); err != nil {
+		if err := wb.Delete(RootKey); err != nil {
 			return err
 		}
 	}
 
 	for _, key := range deletedKeys {
-		if err := batch.Delete(key); err != nil {
+		if err := wb.Delete(key); err != nil {
 			return err
 		}
 	}
 
 	// write to db
-	if err := batch.Flush(); err != nil {
+	if err := wb.Flush(); err != nil {
 		return err
 	}
 

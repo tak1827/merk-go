@@ -18,11 +18,6 @@ func newCommitter(batch *badger.WriteBatch, height, levels uint8) *Commiter {
 }
 
 func (c *Commiter) write(tree *Tree) error {
-	// Note: allow nil batch for testing
-	if c.batch == nil {
-		return nil
-	}
-
 	var key []byte = tree.key()
 	if key == nil {
 		return errors.New("commiter batch key is nil")

@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// const testDBName string = "testdb"
+
 func TestMarshal(t *testing.T) {
 	var leftLink, rightLink Link
 
@@ -53,7 +55,12 @@ func TestUnMarshalTree(t *testing.T) {
 func TestTreeCommit(t *testing.T) {
 	tree := buildTree()
 
-	committer := newCommitter(nil, tree.height(), 1)
+	openDB(testDBName)
+	wb := gDB.newBatch()
+	defer wb.Cancel()
+
+	committer := newCommitter(wb, tree.height(), 1)
+
 	tree.commit(committer)
 
 	require.EqualValues(t, tree.link(true).linkType(), StoredLink)

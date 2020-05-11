@@ -4,6 +4,8 @@ import (
 	"github.com/valyala/bytebufferpool"
 )
 
+var _ Link = (*Modified)(nil)
+
 type Modified struct {
 	ch [2]uint8 // [left, right]
 	t  *Tree

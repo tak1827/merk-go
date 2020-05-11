@@ -11,7 +11,7 @@ import (
 	// "github.com/davecgh/go-spew/spew"
 )
 
-const testDBName string = "testdb"
+const testDBDir string = "../storage/testmerk"
 
 func TestApply(t *testing.T) {
 	var batch1, batch2, batch3, batch4, batch5, batch6 Batch
@@ -106,7 +106,7 @@ func TestGet(t *testing.T) {
 func TestCommit(t *testing.T) {
 	m := buildMerkWithDB()
 
-	defer gDB.closeDB()
+	defer gDB.Close()
 	defer gDB.destroy()
 
 	require.NoError(t, m.tree.verify())
@@ -121,10 +121,10 @@ func TestCommit(t *testing.T) {
 func TestCommitFetchTree(t *testing.T) {
 	m := buildMerkWithDB()
 
-	gDB.closeDB()
+	gDB.Close()
 
-	m, _ = NewMark(testDBName)
-	defer gDB.closeDB()
+	m, _ = New(testDBDir)
+	defer gDB.Close()
 	defer gDB.destroy()
 
 	require.NoError(t, m.tree.verify())
@@ -133,7 +133,7 @@ func TestCommitFetchTree(t *testing.T) {
 func TestCommitDel(t *testing.T) {
 	var batch Batch
 	m := buildMerkWithDB()
-	defer gDB.closeDB()
+	defer gDB.Close()
 	defer gDB.destroy()
 
 	op11 := &OP{O: Del, K: []byte("key1")}
@@ -151,7 +151,7 @@ func TestCommitDel(t *testing.T) {
 func buildMerkWithDB() *Merk {
 	var batch Batch
 
-	m, _ := NewMark(testDBName)
+	m, _ := New(testDBDir)
 
 	op0 := &OP{Put, []byte("key0"), []byte("value0")}
 	op1 := &OP{Put, []byte("key1"), []byte("value1")}
@@ -237,9 +237,9 @@ func BenchmarkCommit(b *testing.B) {
 		size  int = 100_000
 	)
 
-	m, _ := NewMark(testDBName)
+	m, _ := New(testDBDir)
 
-	defer gDB.closeDB()
+	defer gDB.Close()
 	defer gDB.destroy()
 
 	b.ReportAllocs()

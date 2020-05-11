@@ -1,140 +1,47 @@
 package merk
 
 import (
-	"errors"
-	"fmt"
-	badger "github.com/dgraph-io/badger/v2"
-	"path/filepath"
+	"io"
 )
 
-// TOOD: Make changeable from merk
 const (
-	DefaultDBPath = "../storage/"
-	DefaultDBName = "merkdb"
+	DefaultDBDir = "../storage/merkdb"
 )
-
-type DB struct {
-	badger *badger.DB
-	path   string
-}
 
 var (
-	RootKey = []byte(".root")
-	gDB     *DB
+	RootKey       = []byte(".root")
+	NodeKeyPrefix = []byte("@1:")
+	gDB           DB
 )
 
-func defaultDBOpts(name string) badger.Options {
-	var path string
+type DB interface {
+	io.Closer
 
-	if name != "" {
-		path = filepath.Dir(DefaultDBPath + name + "/")
-	} else {
-		path = filepath.Dir(DefaultDBPath + DefaultDBName + "/")
-	}
+	Dir() string
 
-	// See available options
-	// https://godoc.org/github.com/dgraph-io/badger#Options
-	return badger.DefaultOptions(path)
+	get(key []byte) ([]byte, error)
+	put(key, value []byte) error
+	delete(key []byte) error
+
+	destroy() error
+
+	newWriteBatch() WriteBatch
+	commitWriteBatch(batch WriteBatch) error
+
+	fetchTree(key []byte) (*Tree, error)
+	fetchTrees(key []byte) (*Tree, error)
 }
 
-func openDB(name string) error {
-	if gDB != nil {
-		return errors.New("db already open")
-	}
+type WriteBatch interface {
+	put(key, value []byte) error
+	delete(key []byte) error
 
-	ops := defaultDBOpts(name)
-
-	db, err := badger.Open(ops)
-	if err != nil {
-		return fmt.Errorf("failed to open db: %w", err)
-	}
-
-	gDB = &DB{db, ops.Dir}
-
-	return nil
+	cancel()
 }
 
-func (db *DB) closeDB() {
-	gDB = nil
-	db.badger.Close()
-}
+type nullLog struct{}
 
-func (db *DB) destroy() error {
-	err := db.badger.DropAll()
-	return err
-}
-
-func (db *DB) getItem(key []byte) ([]byte, error) {
-	var copy []byte
-
-	if err := db.badger.View(func(txn *badger.Txn) error {
-
-		item, err := txn.Get(key)
-		if err != nil {
-			return fmt.Errorf("failed get key: %w", err)
-		}
-
-		val, err := item.ValueCopy(nil)
-		if err != nil {
-			return fmt.Errorf("failed item value: %w", err)
-		}
-
-		copy = append([]byte{}, val...)
-
-		return nil
-
-	}); err != nil {
-		return nil, fmt.Errorf("failed db View: %w", err)
-	}
-
-	return copy, nil
-}
-
-func (db *DB) newBatch() *badger.WriteBatch {
-	return db.badger.NewWriteBatch()
-}
-
-func (db *DB) fetchTree(key []byte) (*Tree, error) {
-	if key == nil {
-		return nil, errors.New("empty key while fetching tree")
-	}
-
-	item, err := db.getItem(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed getItem: %w", err)
-	}
-
-	t, err := unmarshalTree(key, item)
-	if err != nil {
-		return nil, fmt.Errorf("failed unmarshalTree: %w", err)
-	}
-
-	return t, nil
-}
-
-func (db *DB) fetchTrees(key []byte) (*Tree, error) {
-	tree, err := db.fetchTree(key)
-	if err != nil {
-		return nil, err
-	}
-
-	var leftLink Link = tree.link(true)
-	if leftLink != nil {
-		leftTree, err := db.fetchTrees(leftLink.key())
-		if err != nil {
-			return nil, err
-		}
-		leftLink = leftLink.intoStored(leftTree)
-	}
-
-	var rightLink Link = tree.link(false)
-	if rightLink != nil {
-		rightTree, err := db.fetchTrees(rightLink.key())
-		if err != nil {
-			return nil, err
-		}
-		rightLink = rightLink.intoStored(rightTree)
-	}
-
-	return tree, nil
-}
+func (l nullLog) Errorf(f string, v ...interface{})   {}
+func (l nullLog) Warningf(f string, v ...interface{}) {}
+func (l nullLog) Infof(f string, v ...interface{})    {}
+func (l nullLog) Debugf(f string, v ...interface{})   {}

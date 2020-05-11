@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// const testDBName string = "testdb"
-
 func TestMarshal(t *testing.T) {
 	var leftLink, rightLink Link
 

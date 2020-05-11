@@ -12,12 +12,12 @@ type Merk struct {
 	tree *Tree
 }
 
-func NewMark(name string) (*Merk, error) {
-	if err := openDB(name); err != nil {
+func New(dir string) (*Merk, error) {
+	if err := newBadger(dir); err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
-	topKey, err := gDB.getItem(RootKey)
+	topKey, err := gDB.get(RootKey)
 	if err != nil {
 		if strings.Contains(err.Error(), "Key not found") {
 			return &Merk{}, nil
@@ -121,8 +121,8 @@ func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 }
 
 func (m *Merk) Commit(deletedKeys [][]byte) error {
-	wb := gDB.newBatch()
-	defer wb.Cancel()
+	wb := gDB.newWriteBatch()
+	defer wb.cancel()
 
 	tree := m.tree
 	if tree != nil {
@@ -131,25 +131,25 @@ func (m *Merk) Commit(deletedKeys [][]byte) error {
 			return err
 		}
 
-		if err := wb.Set(RootKey, tree.key()); err != nil {
+		if err := wb.put(RootKey, tree.key()); err != nil {
 			return err
 		}
 
 	} else {
 		// empty tree, delete root
-		if err := wb.Delete(RootKey); err != nil {
+		if err := wb.delete(RootKey); err != nil {
 			return err
 		}
 	}
 
 	for _, key := range deletedKeys {
-		if err := wb.Delete(key); err != nil {
+		if err := wb.delete(key); err != nil {
 			return err
 		}
 	}
 
 	// write to db
-	if err := wb.Flush(); err != nil {
+	if err := gDB.commitWriteBatch(wb); err != nil {
 		return err
 	}
 

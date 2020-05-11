@@ -8,6 +8,8 @@ import (
 	"math"
 )
 
+var _ Link = (*Pruned)(nil)
+
 type Pruned struct {
 	ch [2]uint8 // [left, right]
 	k  []byte   // this is key of db

@@ -1,19 +1,15 @@
 package merk
 
-import (
-	// "errors"
-	badger "github.com/dgraph-io/badger/v2"
-)
-
+// TODO: Make this option
 const DafaultLevels = 1
 
 type Commiter struct {
-	batch  *badger.WriteBatch
+	batch  WriteBatch
 	height uint8
 	levels uint8
 }
 
-func newCommitter(batch *badger.WriteBatch, height, levels uint8) *Commiter {
+func newCommitter(batch WriteBatch, height, levels uint8) *Commiter {
 	return &Commiter{batch, height, levels}
 }
 
@@ -30,7 +26,7 @@ func (c *Commiter) write(tree *Tree) error {
 		return err
 	}
 
-	if err := c.batch.Set(key, b); err != nil {
+	if err := c.batch.put(key, b); err != nil {
 		return err
 	}
 

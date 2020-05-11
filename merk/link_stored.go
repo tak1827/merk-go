@@ -7,6 +7,8 @@ import (
 	"math"
 )
 
+var _ Link = (*Stored)(nil)
+
 type Stored struct {
 	ch [2]uint8 // [left, right]
 	t  *Tree

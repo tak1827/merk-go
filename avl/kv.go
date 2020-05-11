@@ -6,7 +6,6 @@ import (
 	"os"
 	"github.com/pkg/errors"
 	"io"
-	// "github.com/davecgh/go-spew/spew"
 )
 
 var (
@@ -16,14 +15,14 @@ var (
 type KV interface {
 	io.Closer
 
-	Get(key []byte) ([]byte, error)
+  Get(key []byte) ([]byte, error)
 
-	Put(key, value []byte) error
+  Put(key, value []byte) error
 
-	NewWriteBatch() WriteBatch
-	CommitWriteBatch(batch WriteBatch) error
+  NewWriteBatch() WriteBatch
+  CommitWriteBatch(batch WriteBatch) error
 
-	Delete(key []byte) error
+  Delete(key []byte) error
 }
 
 type badgerKV struct {
@@ -63,8 +62,6 @@ func (b *badgerKV) Close() error {
 
 func (b *badgerKV) Get(key []byte) ([]byte, error) {
 	var value []byte
-
-	// spew.Dump(b.db)
 
 	err := b.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)

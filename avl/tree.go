@@ -2,10 +2,8 @@ package avl
 
 import (
 	"bytes"
-	"github.com/perlin-network/wavelet/store"
-	// "github.com/phf/go-queue/queue"
 	"github.com/pkg/errors"
-	// "github.com/valyala/bytebufferpool"
+	"github.com/valyala/bytebufferpool"
 )
 
 var NodeKeyPrefix = []byte("@1:")
@@ -14,7 +12,7 @@ var RootKey = []byte(".root")
 const DefaultCacheSize = 2048
 
 type Tree struct {
-	kv store.KV
+	kv  KV
 
 	root *node
 
@@ -23,20 +21,20 @@ type Tree struct {
 	viewID uint64
 }
 
-// func New(kv store.KV) *Tree {
-// 	t := &Tree{kv: kv, cache: newNodeLRU(DefaultCacheSize), maxWriteBatchSize: MaxWriteBatchSize}
+func New(kv KV) *Tree {
+	t := &Tree{kv: kv, cache: newNodeLRU(DefaultCacheSize)}
 
-// 	// Load root node if it already exists.
-// 	if buf, err := t.kv.Get(RootKey); err == nil && len(buf) == MerkleHashSize {
-// 		var rootID [MerkleHashSize]byte
+	// Load root node if it already exists.
+	if buf, err := t.kv.Get(RootKey); err == nil && len(buf) == MerkleHashSize {
+		var rootID [MerkleHashSize]byte
 
-// 		copy(rootID[:], buf)
+		copy(rootID[:], buf)
 
-// 		t.root = t.mustLoadNode(rootID)
-// 	}
+		t.root = t.mustLoadNode(rootID)
+	}
 
-// 	return t
-// }
+	return t
+}
 
 func (t *Tree) Insert(key, value []byte) {
 	if t.root == nil {
@@ -65,56 +63,56 @@ func (t *Tree) Delete(k []byte) bool {
 	return deleted
 }
 
-// func (t *Tree) Commit() error {
-// 	if t.root == nil {
-// 		// Tree is empty, so just delete the root.
-// 		// If deleting the root fails because it doesn't exist, ignore the error.
-// 		_ = t.kv.Delete(RootKey)
+func (t *Tree) Commit() error {
+	if t.root == nil {
+		// Tree is empty, so just delete the root.
+		// If deleting the root fails because it doesn't exist, ignore the error.
+		_ = t.kv.Delete(RootKey)
 
-// 		return nil
-// 	}
+		return nil
+	}
 
-// 	batch := t.kv.NewWriteBatch()
+	batch := t.kv.NewWriteBatch()
 
-// 	err := t.root.dfs(t, false, func(n *node) (bool, error) {
-// 		if n.wroteBack {
-// 			return false, nil
-// 		}
-// 		n.wroteBack = true
-// 		buf := bytebufferpool.Get()
-// 		defer bytebufferpool.Put(buf)
-// 		if err := n.serialize(buf); err != nil {
-// 			return false, err
-// 		}
+	err := t.root.dfs(t, false, func(n *node) (bool, error) {
+		if n.wroteBack {
+			return false, nil
+		}
+		n.wroteBack = true
+		buf := bytebufferpool.Get()
+		defer bytebufferpool.Put(buf)
+		if err := n.serialize(buf); err != nil {
+			return false, err
+		}
 
-// 		if err := batch.Put(append(NodeKeyPrefix, n.id[:]...), buf.Bytes()); err != nil {
-// 			return false, err
-// 		}
+		if err := batch.Put(append(NodeKeyPrefix, n.id[:]...), buf.Bytes()); err != nil {
+			return false, err
+		}
 
-// 		return true, nil
-// 	})
-// 	if err != nil {
-// 		return err
-// 	}
+		return true, nil
+	})
+	if err != nil {
+		return err
+	}
 
-// 	err = t.kv.CommitWriteBatch(batch)
-// 	if err != nil {
-// 		return errors.Wrap(err, "failed to commit write batch to db")
-// 	}
+	err = t.kv.CommitWriteBatch(batch)
+	if err != nil {
+		return errors.Wrap(err, "failed to commit write batch to db")
+	}
 
-// 	{
-// 		oldRootID, err := t.kv.Get(RootKey)
+	// {
+	// 	oldRootID, err := t.kv.Get(RootKey)
 
-// 		// If we want to include null roots here, getOldRoot() also needs to be fixed.
-// 		if err == nil && len(oldRootID) == MerkleHashSize {
-// 			nextOldRootIndex := t.getNextOldRootIndex()
-// 			t.setOldRoot(nextOldRootIndex, oldRootID)
-// 			t.setNextOldRootIndex(nextOldRootIndex + 1)
-// 		}
-// 	}
+	// 	// If we want to include null roots here, getOldRoot() also needs to be fixed.
+	// 	if err == nil && len(oldRootID) == MerkleHashSize {
+	// 		nextOldRootIndex := t.getNextOldRootIndex()
+	// 		t.setOldRoot(nextOldRootIndex, oldRootID)
+	// 		t.setNextOldRootIndex(nextOldRootIndex + 1)
+	// 	}
+	// }
 
-// 	return t.kv.Put(RootKey, t.root.id[:])
-// }
+	return t.kv.Put(RootKey, t.root.id[:])
+}
 
 func (t *Tree) loadNode(id [MerkleHashSize]byte) (*node, error) {
 	if n, ok := t.cache.Load(id); ok {

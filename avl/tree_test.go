@@ -47,13 +47,42 @@ func buildBatch(b m.Batch, size int) m.Batch {
 	return batch
 }
 
-func BenchmarkNoCommit(b *testing.B) {
+// func BenchmarkApply(b *testing.B) {
+// 	var (
+// 		batch m.Batch
+// 		size int = 100_000
+// 	)
+
+// 	tree := &Tree{}
+
+// 	b.ReportAllocs()
+// 	b.ResetTimer()
+
+// 	for n := 0; n < b.N; n++ {
+// 		b.StopTimer()
+// 		batch = buildBatch(batch, size)
+// 		b.StartTimer()
+
+// 		for _, b := range batch {
+// 			if b.O == m.Put {
+// 				tree.Insert(b.K, b.V)
+// 			} else {
+// 				tree.Delete(b.K)
+// 			}
+// 		}
+// 	}
+// }
+
+func BenchmarkCommit(b *testing.B) {
 	var (
 		batch m.Batch
 		size int = 100_000
 	)
 
-	tree := &Tree{}
+	db, _ := NewBadger("../storage/testavl")
+	tree := New(db)
+	defer db.Close()
+	defer db.db.DropAll()
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -70,5 +99,10 @@ func BenchmarkNoCommit(b *testing.B) {
 				tree.Delete(b.K)
 			}
 		}
+
+		if err := tree.Commit(); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
+

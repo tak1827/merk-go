@@ -208,13 +208,39 @@ func buildBatch(b Batch, size int) Batch {
 	return sortBatch(batch)
 }
 
-func BenchmarkNoCommit(b *testing.B) {
+// func BenchmarkApply(b *testing.B) {
+// 	var (
+// 		batch Batch
+// 		size  int = 100_000
+// 	)
+
+// 	m := &Merk{}
+
+// 	b.ReportAllocs()
+// 	b.ResetTimer()
+
+// 	for n := 0; n < b.N; n++ {
+// 		b.StopTimer()
+// 		batch = buildBatch(batch, size)
+// 		b.StartTimer()
+
+// 		if _, err := m.ApplyUnchecked(batch); err != nil {
+// 		// if _, err := m.Apply(batch); err != nil {
+// 			b.Fatal(err)
+// 		}
+// 	}
+// }
+
+func BenchmarkCommit(b *testing.B) {
 	var (
 		batch Batch
 		size  int = 100_000
 	)
 
-	m := &Merk{}
+	m, _ := NewMark(testDBName)
+
+	defer gDB.closeDB()
+	defer gDB.destroy()
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -224,45 +250,9 @@ func BenchmarkNoCommit(b *testing.B) {
 		batch = buildBatch(batch, size)
 		b.StartTimer()
 
-		// if _, err := m.ApplyUnchecked(batch); err != nil {
-		if _, err := m.Apply(batch); err != nil {
+		if _, err := m.ApplyUnchecked(batch); err != nil {
+			// if _, err := m.Apply(batch); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
-
-// func BenchmarkCommit(b *testing.B) {
-// 	m, _ := &Merk{}
-
-// 	batchBuilder := func(n int) Batch {
-// 		var (
-// 			batch Batch
-// 			keys  [][]byte
-// 		)
-
-// 		for i := 0; i < 100_000; i++ {
-// 			key := blake2b.Sum256([]byte("key" + string(n) + string(i)))
-// 			keys = append(keys, key[:])
-// 		}
-
-// 		sortBytes(keys)
-
-// 		for _, key := range keys {
-// 			value := bytes.Repeat([]byte("x"), RandIntn(1000))
-// 			op := &OP{Put, key, value}
-// 			batch = append(batch, op)
-// 		}
-
-// 		return batch
-// 	}
-
-// 	batch := batchBuilder(0)
-// 	b.ReportAllocs()
-// 	b.ResetTimer()
-
-// 	for n := 0; n < b.N; n++ {
-// 		if _, err := m.applyUnchecked(batch); err != nil {
-// 			b.Fatal(err)
-// 		}
-// 	}
-// }

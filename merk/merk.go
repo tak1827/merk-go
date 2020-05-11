@@ -104,6 +104,7 @@ func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 
 	sortBytes(deletedKeys)
 
+	// Note: don't execute for performance
 	// ensure tree valance
 	// if m.tree != nil {
 	// 	if err := m.tree.verify(); err != nil {

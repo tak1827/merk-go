@@ -8,8 +8,10 @@ import (
 	"os"
 )
 
-var _ DB = (*badgerDB)(nil)
-var _ WriteBatch = (*badgerWriteBatch)(nil)
+var (
+	_ DB         = (*badgerDB)(nil)
+	_ WriteBatch = (*badgerWriteBatch)(nil)
+)
 
 type badgerDB struct {
 	dir string
@@ -121,7 +123,7 @@ func (b *badgerDB) fetchTree(key []byte) (*Tree, error) {
 		return nil, errors.New("empty key while fetching tree")
 	}
 
-	value, err := b.get(key)
+	value, err := b.get(append(NodeKeyPrefix, key...))
 	if err != nil {
 		return nil, fmt.Errorf("failed get, %w", err)
 	}

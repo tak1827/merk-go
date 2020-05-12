@@ -87,6 +87,7 @@ func (m *Merk) Apply(batch Batch) ([][]byte, error) {
 	return m.ApplyUnchecked(batch)
 }
 
+// TODO: separate commiting
 func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 	var (
 		deletedKeys [][]byte

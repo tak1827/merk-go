@@ -26,7 +26,7 @@ func (c *Commiter) write(tree *Tree) error {
 		return err
 	}
 
-	if err := c.batch.put(key, b); err != nil {
+	if err := c.batch.put(append(NodeKeyPrefix, key...), b); err != nil {
 		return err
 	}
 

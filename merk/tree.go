@@ -185,28 +185,54 @@ func (t *Tree) withValue(value []byte) {
 }
 
 func (t *Tree) commit(c *Commiter) error {
+	// Note: if use concurency, slow down when low spec pc
+	chErr := make(chan error, 2)
+
 	var left Link = t.link(true)
 	if left != nil && left.linkType() == ModifiedLink {
-		if err := left.tree().commit(c); err != nil {
-			return err
-		}
-		t.setLink(true, &Stored{
-			ch: left.childHeights(),
-			t:  left.tree(),
-			h:  left.tree().hash(),
-		})
+		go func() {
+
+			if err := left.tree().commit(c); err != nil {
+				chErr <- err
+				return
+			}
+
+			t.setLink(true, &Stored{
+				ch: left.childHeights(),
+				t:  left.tree(),
+				h:  left.tree().hash(),
+			})
+
+			chErr <- nil
+		}()
+	} else {
+		chErr <- nil
 	}
 
 	var right Link = t.link(false)
 	if right != nil && right.linkType() == ModifiedLink {
-		if err := right.tree().commit(c); err != nil {
+		go func() {
+			if err := right.tree().commit(c); err != nil {
+				chErr <- err
+				return
+			}
+
+			t.setLink(false, &Stored{
+				ch: right.childHeights(),
+				t:  right.tree(),
+				h:  right.tree().hash(),
+			})
+
+			chErr <- nil
+		}()
+	} else {
+		chErr <- nil
+	}
+
+	for i := 0; i < cap(chErr); i++ {
+		if err := <-chErr; err != nil {
 			return err
 		}
-		t.setLink(false, &Stored{
-			ch: right.childHeights(),
-			t:  right.tree(),
-			h:  right.tree().hash(),
-		})
 	}
 
 	if err := c.write(t); err != nil {

@@ -132,7 +132,7 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 		chErr <- nil
 	}
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < cap(chErr); i++ {
 		if err := <-chErr; err != nil {
 			return nil, nil, err
 		}

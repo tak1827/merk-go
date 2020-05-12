@@ -3,10 +3,7 @@ package merk
 import (
 	// "sync"
 	"bytes"
-	"encoding/binary"
 	"fmt"
-	"github.com/valyala/bytebufferpool"
-	"math"
 )
 
 type Tree struct {
@@ -22,14 +19,14 @@ func newTree(key, value []byte) *Tree {
 	}
 }
 
-func treeFromFields(key, value []byte, hash Hash, left, right Link) *Tree {
-	kv := kvFromFields(key, value, hash)
-	return &Tree{
-		kv:    kv,
-		left:  left,
-		right: right,
-	}
-}
+// func treeFromFields(key, value []byte, hash Hash, left, right Link) *Tree {
+// 	kv := kvFromFields(key, value, hash)
+// 	return &Tree{
+// 		kv:    kv,
+// 		left:  left,
+// 		right: right,
+// 	}
+// }
 
 func (t *Tree) key() []byte {
 	return t.kv.key
@@ -277,106 +274,6 @@ func (t *Tree) verify() error {
 	}
 
 	return nil
-}
-
-func (t *Tree) marshal() ([]byte, error) {
-	var (
-		buf64               [8]byte
-		haveLeft, haveRight uint8
-	)
-
-	buf := bytebufferpool.Get()
-	defer bytebufferpool.Put(buf)
-
-	// Write kv value
-	if uint32(len(t.value())) > uint32(math.MaxUint32) {
-		return nil, fmt.Errorf("Too long, t.value(): %v ", t.value())
-	}
-	binary.LittleEndian.PutUint32(buf64[:4], uint32(len(t.value())))
-	if _, err := buf.Write(buf64[:4]); err != nil {
-		return nil, err
-	}
-	if _, err := buf.Write(t.value()); err != nil {
-		return nil, err
-	}
-
-	// Write kv hash
-	hash := t.kvHash()
-	if _, err := buf.Write(hash[:]); err != nil {
-		return nil, err
-	}
-
-	// Write left link
-	if t.link(true) != nil {
-		haveLeft = 1
-	}
-	if err := buf.WriteByte(byte(haveLeft)); err != nil {
-		return nil, err
-	}
-	if haveLeft == 1 {
-		if err := t.link(true).marshal(buf); err != nil {
-			return nil, err
-		}
-	}
-
-	// Write right link
-	if t.link(false) != nil {
-		haveRight = 1
-	}
-	if err := buf.WriteByte(byte(haveRight)); err != nil {
-		return nil, err
-	}
-	if haveRight == 1 {
-		if err := t.link(false).marshal(buf); err != nil {
-			return nil, err
-		}
-	}
-
-	return append(make([]byte, 0), buf.Bytes()...), nil
-}
-
-func unmarshalTree(key, data []byte) (*Tree, error) {
-	var buf64 [8]byte
-
-	r := bytes.NewReader(data)
-
-	t := newTree(key, []byte(""))
-
-	t.kv.key = key
-
-	// Read value
-	if _, err := r.Read(buf64[:4]); err != nil {
-		return nil, err
-	}
-	t.kv.value = make([]byte, binary.LittleEndian.Uint32(buf64[:4]))
-	if _, err := r.Read(t.kv.value); err != nil {
-		return nil, err
-	}
-
-	// Read hash
-	if _, err := r.Read(t.kv.hash[:]); err != nil {
-		return nil, err
-	}
-
-	// Read left link
-	haveLeft, err := r.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-	if uint8(haveLeft) == 1 {
-		t.left, _ = unmarshalPruned(r)
-	}
-
-	// Read left link
-	haveRight, err := r.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-	if uint8(haveRight) == 1 {
-		t.right, _ = unmarshalPruned(r)
-	}
-
-	return t, nil
 }
 
 func sideToStr(isLeft bool) string {

@@ -91,7 +91,7 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte, error) {
 func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte, error) {
 	var (
 		leftBatch, rightBatch Batch
-		deletedKeys           [][]byte
+		deletedKeysLeft, deletedKeysRight           [][]byte
 	)
 
 	leftBatch = batch[:mid]
@@ -108,8 +108,8 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 		go func() {
 
 			err := tree.walk(true, func(maybeLeft *Tree) (*Tree, error) {
-				maybeLeft, deletedKeysLeft, err := applyTo(maybeLeft, leftBatch)
-				deletedKeys = append(deletedKeys, deletedKeysLeft...)
+				maybeLeft, deletedKeys, err := applyTo(maybeLeft, leftBatch)
+				deletedKeysLeft = append(deletedKeysLeft, deletedKeys...)
 				return maybeLeft, err
 			})
 			chErr <- err
@@ -122,8 +122,8 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 		go func() {
 
 			err := tree.walk(false, func(maybeRight *Tree) (*Tree, error) {
-				maybeRight, deletedKeysRight, err := applyTo(maybeRight, rightBatch)
-				deletedKeys = append(deletedKeys, deletedKeysRight...)
+				maybeRight, deletedKeys, err := applyTo(maybeRight, rightBatch)
+				deletedKeysRight = append(deletedKeysRight, deletedKeys...)
 				return maybeRight, err
 			})
 			chErr <- err
@@ -138,7 +138,7 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 		}
 	}
 
-	return maybeBalance(tree), deletedKeys, nil
+	return maybeBalance(tree), append(deletedKeysLeft, deletedKeysRight...), nil
 }
 
 func balanceFactor(tree *Tree) int8 {

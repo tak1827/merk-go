@@ -1,5 +1,9 @@
 package merk
 
+import (
+	"github.com/valyala/bytebufferpool"
+)
+
 // TODO: Make this option
 const DafaultLevels = 1
 
@@ -7,10 +11,12 @@ type Commiter struct {
 	batch  WriteBatch
 	height uint8
 	levels uint8
+	pool   *bytebufferpool.Pool
 }
 
 func newCommitter(batch WriteBatch, height, levels uint8) *Commiter {
-	return &Commiter{batch, height, levels}
+	pool := new(bytebufferpool.Pool)
+	return &Commiter{batch, height, levels, pool}
 }
 
 func (c *Commiter) write(tree *Tree) error {
@@ -20,11 +26,7 @@ func (c *Commiter) write(tree *Tree) error {
 	}
 
 	var key []byte = tree.key()
-
-	b, err := tree.marshal()
-	if err != nil {
-		return err
-	}
+	var b []byte = tree.marshal(c.pool)
 
 	if err := c.batch.put(append(NodeKeyPrefix, key...), b); err != nil {
 		return err

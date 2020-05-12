@@ -128,10 +128,7 @@ func (b *badgerDB) fetchTree(key []byte) (*Tree, error) {
 		return nil, fmt.Errorf("failed get, %w", err)
 	}
 
-	t, err := unmarshalTree(key, value)
-	if err != nil {
-		return nil, fmt.Errorf("failed unmarshalTree: %w", err)
-	}
+	t := unmarshalTree(key, value)
 
 	return t, nil
 }

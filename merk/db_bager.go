@@ -18,9 +18,9 @@ type badgerDB struct {
 	db  *badger.DB
 }
 
-func newBadger(dir string) error {
+func newBadger(dir string) (DB, error) {
 	if gDB != nil {
-		return fmt.Errorf("db already open, dir: %v", gDB.Dir())
+		return nil, fmt.Errorf("db already open, dir: %v", gDB.Dir())
 	}
 
 	if dir == "" {
@@ -28,19 +28,19 @@ func newBadger(dir string) error {
 	}
 
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
+		return nil, err
 	}
 
 	ops := setBadgerOpts(dir)
 
 	db, err := badger.Open(ops)
 	if err != nil {
-		return fmt.Errorf("failed to open db: %w", err)
+		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
 	gDB = &badgerDB{ops.Dir, db}
 
-	return nil
+	return gDB, nil
 }
 
 func setBadgerOpts(dir string) badger.Options {

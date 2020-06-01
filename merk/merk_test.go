@@ -102,10 +102,10 @@ func TestGet(t *testing.T) {
 }
 
 func TestCommit(t *testing.T) {
-	m := buildMerkWithDB()
+	m, db := buildMerkWithDB()
 
-	defer gDB.Close()
-	defer gDB.Destroy()
+	defer db.Close()
+	defer db.Destroy()
 
 	require.NoError(t, m.tree.verify())
 	require.EqualValues(t, PrunedLink, m.tree.child(true).child(true).link(true).linkType())
@@ -122,9 +122,9 @@ func TestCommitFetchTree(t *testing.T) {
 		db DB
 	)
 
-	m = buildMerkWithDB()
+	m, db = buildMerkWithDB()
 
-	gDB.Close()
+	db.Close()
 
 	m, db, _ = New(testDBDir)
 	defer db.Close()
@@ -135,9 +135,9 @@ func TestCommitFetchTree(t *testing.T) {
 
 func TestCommitDel(t *testing.T) {
 	var batch Batch
-	m := buildMerkWithDB()
-	defer gDB.Close()
-	defer gDB.Destroy()
+	m, db := buildMerkWithDB()
+	defer db.Close()
+	defer db.Destroy()
 
 	op11 := &OP{O: Del, K: []byte("key1")}
 	op15 := &OP{O: Del, K: []byte("key5")}
@@ -151,10 +151,10 @@ func TestCommitDel(t *testing.T) {
 	require.NoError(t, m.tree.verify())
 }
 
-func buildMerkWithDB() *Merk {
+func buildMerkWithDB() (*Merk, DB) {
 	var batch Batch
 
-	m, _, _ := New(testDBDir)
+	m, db, _ := New(testDBDir)
 
 	op0 := &OP{Put, []byte("key0"), []byte("value0")}
 	op1 := &OP{Put, []byte("key1"), []byte("value1")}
@@ -170,7 +170,7 @@ func buildMerkWithDB() *Merk {
 	batch = append(batch, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
 	m.Apply(batch)
 
-	return m
+	return m, db
 }
 
 func BenchmarkApply(b *testing.B) {

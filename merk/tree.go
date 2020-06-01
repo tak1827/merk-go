@@ -68,7 +68,7 @@ func (t *Tree) child(isLeft bool) *Tree {
 	}
 
 	if l.linkType() == PrunedLink {
-		child, err := gDB.fetchTree(l.key())
+		child, err := fetchTree(l.key())
 		if err != nil {
 			panic(fmt.Sprintf("failed to fetch node: %v", err))
 		}
@@ -141,7 +141,7 @@ func (t *Tree) detach(isLeft bool) *Tree {
 	t.setLink(isLeft, nil)
 
 	if slot.linkType() == PrunedLink {
-		child, err := gDB.fetchTree(slot.key())
+		child, err := fetchTree(slot.key())
 		if err != nil {
 			panic(fmt.Sprintf("failed to fetch node: %v", err))
 		}

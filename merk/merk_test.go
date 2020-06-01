@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/blake2b"
-	"testing"
-	// "fmt"
 	"math"
 	"strconv"
-	// "github.com/davecgh/go-spew/spew"
+	"testing"
 )
 
 const testDBDir string = "../storage/testmerk"
@@ -107,7 +105,7 @@ func TestCommit(t *testing.T) {
 	m := buildMerkWithDB()
 
 	defer gDB.Close()
-	defer gDB.destroy()
+	defer gDB.Destroy()
 
 	require.NoError(t, m.tree.verify())
 	require.EqualValues(t, PrunedLink, m.tree.child(true).child(true).link(true).linkType())
@@ -119,13 +117,18 @@ func TestCommit(t *testing.T) {
 }
 
 func TestCommitFetchTree(t *testing.T) {
-	m := buildMerkWithDB()
+	var (
+		m  *Merk
+		db DB
+	)
+
+	m = buildMerkWithDB()
 
 	gDB.Close()
 
-	m, _ = New(testDBDir)
-	defer gDB.Close()
-	defer gDB.destroy()
+	m, db, _ = New(testDBDir)
+	defer db.Close()
+	defer db.Destroy()
 
 	require.NoError(t, m.tree.verify())
 }
@@ -134,7 +137,7 @@ func TestCommitDel(t *testing.T) {
 	var batch Batch
 	m := buildMerkWithDB()
 	defer gDB.Close()
-	defer gDB.destroy()
+	defer gDB.Destroy()
 
 	op11 := &OP{O: Del, K: []byte("key1")}
 	op15 := &OP{O: Del, K: []byte("key5")}
@@ -151,7 +154,7 @@ func TestCommitDel(t *testing.T) {
 func buildMerkWithDB() *Merk {
 	var batch Batch
 
-	m, _ := New(testDBDir)
+	m, _, _ := New(testDBDir)
 
 	op0 := &OP{Put, []byte("key0"), []byte("value0")}
 	op1 := &OP{Put, []byte("key1"), []byte("value1")}
@@ -168,6 +171,55 @@ func buildMerkWithDB() *Merk {
 	m.Apply(batch)
 
 	return m
+}
+
+func BenchmarkApply(b *testing.B) {
+	var (
+		batch Batch
+		size  int = 100_000
+	)
+
+	m := &Merk{}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		b.StopTimer()
+		batch = buildBatch(batch, size)
+		b.StartTimer()
+
+		if _, err := m.ApplyUnchecked(batch); err != nil {
+			// if _, err := m.Apply(batch); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkCommit(b *testing.B) {
+	var (
+		batch Batch
+		size  int = 100_000
+	)
+
+	m, db, _ := New(testDBDir)
+
+	defer db.Close()
+	defer db.Destroy()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		b.StopTimer()
+		batch = buildBatch(batch, size)
+		b.StartTimer()
+
+		if _, err := m.ApplyUnchecked(batch); err != nil {
+			// if _, err := m.Apply(batch); err != nil {
+			b.Fatal(err)
+		}
+	}
 }
 
 func buildBatch(b Batch, size int) Batch {
@@ -206,53 +258,4 @@ func buildBatch(b Batch, size int) Batch {
 	}
 
 	return sortBatch(batch)
-}
-
-// func BenchmarkApply(b *testing.B) {
-// 	var (
-// 		batch Batch
-// 		size  int = 100_000
-// 	)
-
-// 	m := &Merk{}
-
-// 	b.ReportAllocs()
-// 	b.ResetTimer()
-
-// 	for n := 0; n < b.N; n++ {
-// 		b.StopTimer()
-// 		batch = buildBatch(batch, size)
-// 		b.StartTimer()
-
-// 		if _, err := m.ApplyUnchecked(batch); err != nil {
-// 		// if _, err := m.Apply(batch); err != nil {
-// 			b.Fatal(err)
-// 		}
-// 	}
-// }
-
-func BenchmarkCommit(b *testing.B) {
-	var (
-		batch Batch
-		size  int = 100_000
-	)
-
-	m, _ := New(testDBDir)
-
-	defer gDB.Close()
-	defer gDB.destroy()
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for n := 0; n < b.N; n++ {
-		b.StopTimer()
-		batch = buildBatch(batch, size)
-		b.StartTimer()
-
-		if _, err := m.ApplyUnchecked(batch); err != nil {
-			// if _, err := m.Apply(batch); err != nil {
-			b.Fatal(err)
-		}
-	}
 }

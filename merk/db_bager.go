@@ -99,7 +99,7 @@ func (b *badgerDB) delete(key []byte) error {
 	})
 }
 
-func (b *badgerDB) destroy() error {
+func (b *badgerDB) Destroy() error {
 	return b.db.DropAll()
 }
 

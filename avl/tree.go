@@ -12,7 +12,7 @@ var RootKey = []byte(".root")
 const DefaultCacheSize = 2048
 
 type Tree struct {
-	kv  KV
+	kv KV
 
 	root *node
 

@@ -17,13 +17,13 @@ var (
 type DB interface {
 	io.Closer
 
+	Destroy() error
+
 	Dir() string
 
 	get(key []byte) ([]byte, error)
 	put(key, value []byte) error
 	delete(key []byte) error
-
-	destroy() error
 
 	newWriteBatch() WriteBatch
 	commitWriteBatch(batch WriteBatch) error

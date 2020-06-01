@@ -3,9 +3,9 @@ package avl
 import (
 	badger "github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
-	"os"
 	"github.com/pkg/errors"
 	"io"
+	"os"
 )
 
 var (
@@ -15,14 +15,14 @@ var (
 type KV interface {
 	io.Closer
 
-  Get(key []byte) ([]byte, error)
+	Get(key []byte) ([]byte, error)
 
-  Put(key, value []byte) error
+	Put(key, value []byte) error
 
-  NewWriteBatch() WriteBatch
-  CommitWriteBatch(batch WriteBatch) error
+	NewWriteBatch() WriteBatch
+	CommitWriteBatch(batch WriteBatch) error
 
-  Delete(key []byte) error
+	Delete(key []byte) error
 }
 
 type badgerKV struct {
@@ -49,8 +49,8 @@ func NewBadger(dir string) (*badgerKV, error) { // nolint:golint
 	}
 
 	b := &badgerKV{
-		dir:     dir,
-		db:      db,
+		dir: dir,
+		db:  db,
 	}
 
 	return b, nil
@@ -115,7 +115,6 @@ type WriteBatch interface {
 
 	Destroy()
 }
-
 
 func (b *badgerKV) NewWriteBatch() WriteBatch {
 	return &badgerWriteBatch{

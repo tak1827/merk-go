@@ -12,25 +12,25 @@ type Merk struct {
 	tree *Tree
 }
 
-func New(dir string) (*Merk, error) {
+func New(dir string) (*Merk, DB, error) {
 	if err := newBadger(dir); err != nil {
-		return nil, fmt.Errorf("failed to open db: %w", err)
+		return nil, nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
 	topKey, err := gDB.get(RootKey)
 	if err != nil {
 		if strings.Contains(err.Error(), "Key not found") {
-			return &Merk{}, nil
+			return &Merk{}, gDB, nil
 		}
-		return nil, err
+		return nil, gDB, err
 	}
 
 	tree, err := gDB.fetchTrees(topKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed fetchTrees: %w", err)
+		return nil, gDB, fmt.Errorf("failed fetchTrees: %w", err)
 	}
 
-	return &Merk{tree}, nil
+	return &Merk{tree}, gDB, nil
 }
 
 func (m *Merk) Get(key []byte) []byte {

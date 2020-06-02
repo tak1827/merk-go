@@ -1,9 +1,5 @@
 package merk
 
-import (
-	"github.com/valyala/bytebufferpool"
-)
-
 var _ Link = (*Modified)(nil)
 
 type Modified struct {
@@ -48,10 +44,6 @@ func (m *Modified) intoPruned() Link {
 
 func (m *Modified) intoStored(tree *Tree) Link {
 	panic("BUG: cannot restore from Modified tree")
-}
-
-func (m *Modified) marshal(buf *bytebufferpool.ByteBuffer) error {
-	panic("BUG: no encoding for Modified tree")
 }
 
 func fromModifiedTree(tree *Tree) *Modified {

@@ -1,12 +1,5 @@
 package merk
 
-import (
-	"encoding/binary"
-	"fmt"
-	"github.com/valyala/bytebufferpool"
-	"math"
-)
-
 var _ Link = (*Stored)(nil)
 
 type Stored struct {
@@ -55,37 +48,5 @@ func (s *Stored) intoPruned() Link {
 }
 
 func (s *Stored) intoStored(tree *Tree) Link {
-	panic("BUG: cannot restore from Modified tree")
-}
-
-func (s *Stored) marshal(buf *bytebufferpool.ByteBuffer) error {
-	var buf64 [8]byte
-	var key []byte = s.key()
-
-	// Write key
-	if uint32(len(key)) > uint32(math.MaxUint32) {
-		return fmt.Errorf("too long, key: %v ", key)
-	}
-	binary.LittleEndian.PutUint32(buf64[:4], uint32(len(key)))
-	if _, err := buf.Write(buf64[:4]); err != nil {
-		return err
-	}
-	if _, err := buf.Write(key); err != nil {
-		return err
-	}
-
-	// Write hash
-	if _, err := buf.Write(s.h[:]); err != nil {
-		return err
-	}
-
-	// Write child heights
-	if err := buf.WriteByte(byte(s.ch[0])); err != nil {
-		return err
-	}
-	if err := buf.WriteByte(byte(s.ch[1])); err != nil {
-		return err
-	}
-
-	return nil
+	panic("BUG: cannot restore from Stored tree")
 }

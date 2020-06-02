@@ -108,12 +108,10 @@ func TestCommit(t *testing.T) {
 	defer db.Destroy()
 
 	require.NoError(t, m.tree.verify())
-	require.EqualValues(t, PrunedLink, m.tree.child(true).child(true).link(true).linkType())
-	require.EqualValues(t, PrunedLink, m.tree.child(true).child(false).link(true).linkType())
-	require.EqualValues(t, PrunedLink, m.tree.child(false).child(true).link(true).linkType())
-	require.Nil(t, m.tree.child(true).child(true).link(true).tree())
-	require.Nil(t, m.tree.child(true).child(false).link(true).tree())
-	require.Nil(t, m.tree.child(false).child(true).link(true).tree())
+	require.EqualValues(t, PrunedLink, m.tree.child(true).link(true).linkType())
+	require.EqualValues(t, PrunedLink, m.tree.child(true).link(false).linkType())
+	require.EqualValues(t, PrunedLink, m.tree.child(false).link(true).linkType())
+	require.EqualValues(t, PrunedLink, m.tree.child(false).link(false).linkType())
 }
 
 func TestCommitFetchTree(t *testing.T) {

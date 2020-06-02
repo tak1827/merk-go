@@ -19,14 +19,11 @@ func (c *Commiter) write(tree *Tree) error {
 		return nil
 	}
 
-	var key []byte = tree.key()
+	var key Hash = tree.hash()
 
-	b, err := tree.marshal()
-	if err != nil {
-		return err
-	}
+	b := tree.marshal()
 
-	if err := c.batch.put(append(NodeKeyPrefix, key...), b); err != nil {
+	if err := c.batch.put(append(NodeKeyPrefix, key[:]...), b); err != nil {
 		return err
 	}
 

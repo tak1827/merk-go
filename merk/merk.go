@@ -133,7 +133,8 @@ func (m *Merk) Commit(deletedKeys [][]byte) error {
 			return err
 		}
 
-		if err := wb.put(RootKey, tree.key()); err != nil {
+		var h Hash = m.RootHash()
+		if err := wb.put(RootKey, h[:]); err != nil {
 			return err
 		}
 

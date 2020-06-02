@@ -1,12 +1,10 @@
 package merk
 
 import (
-	// "sync"
 	"bytes"
-	"encoding/binary"
 	"fmt"
-	"github.com/valyala/bytebufferpool"
-	"math"
+	"github.com/lithdew/bytesutil"
+	"unsafe"
 )
 
 type Tree struct {
@@ -55,7 +53,8 @@ func (t *Tree) child(isLeft bool) *Tree {
 	}
 
 	if l.linkType() == PrunedLink {
-		child, err := gDB.fetchTree(l.key())
+		var h Hash = l.hash()
+		child, err := gDB.fetchTree(h[:])
 		if err != nil {
 			panic(fmt.Sprintf("failed to fetch node: %v", err))
 		}
@@ -128,7 +127,8 @@ func (t *Tree) detach(isLeft bool) *Tree {
 	t.setLink(isLeft, nil)
 
 	if slot.linkType() == PrunedLink {
-		child, err := gDB.fetchTree(slot.key())
+		var h Hash = slot.hash()
+		child, err := gDB.fetchTree(h[:])
 		if err != nil {
 			panic(fmt.Sprintf("failed to fetch node: %v", err))
 		}
@@ -166,6 +166,7 @@ func (t *Tree) walkExpect(isLeft bool, f func(tree *Tree) *Tree) {
 
 func (t *Tree) withValue(value []byte) {
 	t.kv.value = value
+	t.kv.hash = kvHash(t.kv.key, value)
 }
 
 func (t *Tree) commit(c *Commiter) error {
@@ -263,104 +264,74 @@ func (t *Tree) verify() error {
 	return nil
 }
 
-func (t *Tree) marshal() ([]byte, error) {
+func (t *Tree) marshal() []byte {
 	var (
-		buf64               [8]byte
-		haveLeft, haveRight uint8
+		dst  []byte
+		hash Hash
 	)
 
-	buf := bytebufferpool.Get()
-	defer bytebufferpool.Put(buf)
+	// write key
+	dst = bytesutil.AppendUint32BE(dst, uint32(len(t.key())))
+	dst = append(dst, t.key()...)
 
-	// Write kv value
-	if uint32(len(t.value())) > uint32(math.MaxUint32) {
-		return nil, fmt.Errorf("Too long, t.value(): %v ", t.value())
-	}
-	binary.LittleEndian.PutUint32(buf64[:4], uint32(len(t.value())))
-	if _, err := buf.Write(buf64[:4]); err != nil {
-		return nil, err
-	}
-	if _, err := buf.Write(t.value()); err != nil {
-		return nil, err
-	}
-
-	// Write kv hash
-	hash := t.kvHash()
-	if _, err := buf.Write(hash[:]); err != nil {
-		return nil, err
-	}
-
-	// Write left link
+	// write left link
 	if t.link(true) != nil {
-		haveLeft = 1
-	}
-	if err := buf.WriteByte(byte(haveLeft)); err != nil {
-		return nil, err
-	}
-	if haveLeft == 1 {
-		if err := t.link(true).marshal(buf); err != nil {
-			return nil, err
-		}
+		dst = append(dst, uint8(1))
+		hash = t.link(true).hash()
+		dst = append(dst, hash[:]...)
+	} else {
+		dst = append(dst, uint8(0))
 	}
 
-	// Write right link
+	// write right link
 	if t.link(false) != nil {
-		haveRight = 1
-	}
-	if err := buf.WriteByte(byte(haveRight)); err != nil {
-		return nil, err
-	}
-	if haveRight == 1 {
-		if err := t.link(false).marshal(buf); err != nil {
-			return nil, err
-		}
+		dst = append(dst, uint8(1))
+		hash = t.link(false).hash()
+		dst = append(dst, hash[:]...)
+	} else {
+		dst = append(dst, uint8(0))
 	}
 
-	return append(make([]byte, 0), buf.Bytes()...), nil
+	// write value
+	dst = append(dst, t.value()...)
+
+	return dst
 }
 
-func unmarshalTree(key, data []byte) (*Tree, error) {
-	var buf64 [8]byte
+func unmarshalTree(buf []byte) *Tree {
+	var (
+		kLen              uint32
+		hasLeft, hasRight uint8
+		hash              Hash
+	)
 
-	r := bytes.NewReader(data)
+	t := &Tree{kv: &KV{}}
 
-	t := newTree(key, []byte(""))
+	// read key
+	kLen, buf = bytesutil.Uint32BE(buf[:4]), buf[4:]
+	t.kv.key, buf = buf[:kLen], buf[kLen:]
 
-	t.kv.key = key
-
-	// Read value
-	if _, err := r.Read(buf64[:4]); err != nil {
-		return nil, err
-	}
-	t.kv.value = make([]byte, binary.LittleEndian.Uint32(buf64[:4]))
-	if _, err := r.Read(t.kv.value); err != nil {
-		return nil, err
-	}
-
-	// Read hash
-	if _, err := r.Read(t.kv.hash[:]); err != nil {
-		return nil, err
+	// read left
+	hasLeft, buf = uint8(buf[0]), buf[1:]
+	if hasLeft == 1 {
+		hash, buf = *(*Hash)(unsafe.Pointer(&((buf[:HashSize])[0]))), buf[HashSize:]
+		t.left = &Pruned{h: hash}
 	}
 
-	// Read left link
-	haveLeft, err := r.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-	if uint8(haveLeft) == 1 {
-		t.left, _ = unmarshalPruned(r)
+	// read right
+	hasRight, buf = uint8(buf[0]), buf[1:]
+	if hasRight == 1 {
+		hash, buf = *(*Hash)(unsafe.Pointer(&((buf[:HashSize])[0]))), buf[HashSize:]
+		t.right = &Pruned{h: hash}
 	}
 
-	// Read left link
-	haveRight, err := r.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-	if uint8(haveRight) == 1 {
-		t.right, _ = unmarshalPruned(r)
-	}
+	// read value
+	t.kv.value = buf
 
-	return t, nil
+	// calculate hash
+	t.kv.hash = kvHash(t.kv.key, t.kv.value)
+
+	return t
 }
 
 func sideToStr(isLeft bool) string {

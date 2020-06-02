@@ -128,15 +128,14 @@ func (b *badgerDB) fetchTree(key []byte) (*Tree, error) {
 		return nil, fmt.Errorf("failed get, %w", err)
 	}
 
-	t, err := unmarshalTree(key, value)
-	if err != nil {
-		return nil, fmt.Errorf("failed unmarshalTree: %w", err)
-	}
+	t := unmarshalTree(value)
 
 	return t, nil
 }
 
 func (b *badgerDB) fetchTrees(key []byte) (*Tree, error) {
+	var h Hash
+
 	tree, err := b.fetchTree(key)
 	if err != nil {
 		return nil, err
@@ -144,20 +143,22 @@ func (b *badgerDB) fetchTrees(key []byte) (*Tree, error) {
 
 	var leftLink Link = tree.link(true)
 	if leftLink != nil {
-		leftTree, err := b.fetchTrees(leftLink.key())
+		h = leftLink.hash()
+		leftTree, err := b.fetchTrees(h[:])
 		if err != nil {
 			return nil, err
 		}
-		leftLink = leftLink.intoStored(leftTree)
+		tree.setLink(true, leftLink.intoStored(leftTree))
 	}
 
 	var rightLink Link = tree.link(false)
 	if rightLink != nil {
-		rightTree, err := b.fetchTrees(rightLink.key())
+		h = rightLink.hash()
+		rightTree, err := b.fetchTrees(h[:])
 		if err != nil {
 			return nil, err
 		}
-		rightLink = rightLink.intoStored(rightTree)
+		tree.setLink(false, rightLink.intoStored(rightTree))
 	}
 
 	return tree, nil

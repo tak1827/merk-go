@@ -1,9 +1,5 @@
 package merk
 
-import (
-	"github.com/valyala/bytebufferpool"
-)
-
 type LinkType uint8
 
 const (
@@ -25,6 +21,4 @@ type Link interface {
 
 	intoPruned() Link
 	intoStored(tree *Tree) Link
-
-	marshal(buf *bytebufferpool.ByteBuffer) error
 }

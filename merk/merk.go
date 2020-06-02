@@ -115,7 +115,7 @@ func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 	// }
 
 	// commit if db exist
-	if dbExist() {
+	if gDB != nil {
 		m.Commit(deletedKeys)
 	}
 
@@ -123,7 +123,7 @@ func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 }
 
 func (m *Merk) Commit(deletedKeys [][]byte) error {
-	wb := newWriteBatch()
+	wb := gDB.newWriteBatch()
 	defer wb.cancel()
 
 	tree := m.tree
@@ -151,7 +151,7 @@ func (m *Merk) Commit(deletedKeys [][]byte) error {
 	}
 
 	// write to db
-	if err := commitWriteBatch(wb); err != nil {
+	if err := gDB.commitWriteBatch(wb); err != nil {
 		return err
 	}
 

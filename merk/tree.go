@@ -13,21 +13,11 @@ type Tree struct {
 	kv    *KV
 	left  Link
 	right Link
-	// mu sync.Mutex
 }
 
 func newTree(key, value []byte) *Tree {
 	return &Tree{
 		kv: newKV(key, value),
-	}
-}
-
-func treeFromFields(key, value []byte, hash Hash, left, right Link) *Tree {
-	kv := kvFromFields(key, value, hash)
-	return &Tree{
-		kv:    kv,
-		left:  left,
-		right: right,
 	}
 }
 
@@ -51,9 +41,6 @@ func (t *Tree) link(isLeft bool) Link {
 }
 
 func (t *Tree) setLink(isLeft bool, link Link) {
-	// t.mu.Lock()
-	// defer t.mu.Unlock()
-
 	if isLeft {
 		t.left = link
 		return
@@ -68,7 +55,7 @@ func (t *Tree) child(isLeft bool) *Tree {
 	}
 
 	if l.linkType() == PrunedLink {
-		child, err := fetchTree(l.key())
+		child, err := gDB.fetchTree(l.key())
 		if err != nil {
 			panic(fmt.Sprintf("failed to fetch node: %v", err))
 		}
@@ -141,7 +128,7 @@ func (t *Tree) detach(isLeft bool) *Tree {
 	t.setLink(isLeft, nil)
 
 	if slot.linkType() == PrunedLink {
-		child, err := fetchTree(slot.key())
+		child, err := gDB.fetchTree(slot.key())
 		if err != nil {
 			panic(fmt.Sprintf("failed to fetch node: %v", err))
 		}
@@ -178,9 +165,6 @@ func (t *Tree) walkExpect(isLeft bool, f func(tree *Tree) *Tree) {
 }
 
 func (t *Tree) withValue(value []byte) {
-	// t.mu.Lock()
-	// defer t.mu.Unlock()
-
 	t.kv.value = value
 }
 

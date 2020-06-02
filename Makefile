@@ -6,7 +6,7 @@ fmt:
 	go vet ./merk/
 
 test:
-	go test ./... -race -count=10
+	go test ./... -v -race -count=10
 
 testmerk:
 	go test ./merk/

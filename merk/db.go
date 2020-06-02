@@ -32,27 +32,11 @@ type DB interface {
 	fetchTrees(key []byte) (*Tree, error)
 }
 
-func dbExist() bool {
-	return gDB != nil
-}
-
-func fetchTree(key []byte) (*Tree, error) {
-	return gDB.fetchTree(key)
-}
-
 type WriteBatch interface {
 	put(key, value []byte) error
 	delete(key []byte) error
 
 	cancel()
-}
-
-func newWriteBatch() WriteBatch {
-	return gDB.newWriteBatch()
-}
-
-func commitWriteBatch(w WriteBatch) error {
-	return gDB.commitWriteBatch(w)
 }
 
 type nullLog struct{}

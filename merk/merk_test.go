@@ -149,6 +149,37 @@ func TestCommitDel(t *testing.T) {
 	require.NoError(t, m.tree.verify())
 }
 
+func TestTakeSnapshot(t *testing.T) {
+	m, db := buildMerkWithDB()
+	defer db.Close()
+	defer db.Destroy()
+
+	snapshotKey, err := TakeDBSnapshot()
+	require.NoError(t, err)
+	require.EqualValues(t, m.RootHash(), snapshotKey)
+
+	var batch Batch = []*OP{
+		&OP{O: Del, K: []byte("key1")},
+		&OP{O: Del, K: []byte("key5")},
+	}
+	m.Apply(batch)
+
+	err = m.Revert(snapshotKey)
+	require.NoError(t, err)
+
+	require.NoError(t, m.tree.verify())
+	require.EqualValues(t, m.tree.key(), []byte("key5"))
+	require.EqualValues(t, m.tree.link(true).key(), []byte("key2"))
+	require.EqualValues(t, m.tree.link(true).tree().link(true).key(), []byte("key1"))
+	require.EqualValues(t, m.tree.link(true).tree().link(true).tree().link(true).key(), []byte("key0"))
+	require.EqualValues(t, m.tree.link(true).tree().link(false).key(), []byte("key4"))
+	require.EqualValues(t, m.tree.link(true).tree().link(false).tree().link(true).key(), []byte("key3"))
+	require.EqualValues(t, m.tree.link(false).key(), []byte("key8"))
+	require.EqualValues(t, m.tree.link(false).tree().link(true).key(), []byte("key7"))
+	require.EqualValues(t, m.tree.link(false).tree().link(true).tree().link(true).key(), []byte("key6"))
+	require.EqualValues(t, m.tree.link(false).tree().link(false).key(), []byte("key9"))
+}
+
 func buildMerkWithDB() (*Merk, DB) {
 	var batch Batch
 

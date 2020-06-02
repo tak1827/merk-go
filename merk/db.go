@@ -30,6 +30,8 @@ type DB interface {
 
 	fetchTree(key []byte) (*Tree, error)
 	fetchTrees(key []byte) (*Tree, error)
+
+	takeSnapshot() (Hash, error)
 }
 
 type WriteBatch interface {

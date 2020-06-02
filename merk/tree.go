@@ -2,6 +2,7 @@ package merk
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/lithdew/bytesutil"
 	"unsafe"
@@ -231,6 +232,58 @@ func (t *Tree) commit(c *Commiter) error {
 		if t.link(false) != nil {
 			t.right = t.right.intoPruned()
 		}
+	}
+
+	return nil
+}
+
+func (t *Tree) commitsSnapshot(c *Commiter) error {
+	// Note: if use concurency, slow down when low spec pc
+	chErr := make(chan error, 2)
+
+	var left Link = t.link(true)
+	if left != nil {
+		if left.linkType() != StoredLink {
+			return errors.New("snopshot must be taken from stored tree")
+		}
+
+		go func() {
+			if err := left.tree().commit(c); err != nil {
+				chErr <- err
+				return
+			}
+			chErr <- nil
+		}()
+	} else {
+		chErr <- nil
+	}
+
+	var right Link = t.link(false)
+	if right != nil {
+		if right.linkType() != StoredLink {
+			return errors.New("snopshot must be taken from stored tree")
+		}
+
+		go func() {
+			if err := right.tree().commit(c); err != nil {
+				chErr <- err
+				return
+			}
+
+			chErr <- nil
+		}()
+	} else {
+		chErr <- nil
+	}
+
+	for i := 0; i < cap(chErr); i++ {
+		if err := <-chErr; err != nil {
+			return err
+		}
+	}
+
+	if err := c.write(t); err != nil {
+		return err
 	}
 
 	return nil

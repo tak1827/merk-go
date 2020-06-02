@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"math"
 	"strings"
 )
@@ -157,4 +158,29 @@ func (m *Merk) Commit(deletedKeys [][]byte) error {
 	}
 
 	return nil
+}
+
+func (m *Merk) Revert(snapshotKey Hash) error {
+	if gDB == nil {
+		return errors.New("db is not open")
+	}
+
+	tree, err := gDB.fetchTrees(snapshotKey[:])
+	spew.Dump(snapshotKey)
+	spew.Dump(tree)
+	if err != nil {
+		return err
+	}
+	m.tree = tree
+
+	return nil
+}
+
+// Take snapshot from current stored tree
+func TakeDBSnapshot() (Hash, error) {
+	if gDB == nil {
+		return NullHash, errors.New("db is not open")
+	}
+
+	return gDB.takeSnapshot()
 }

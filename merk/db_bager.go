@@ -164,6 +164,35 @@ func (b *badgerDB) fetchTrees(key []byte) (*Tree, error) {
 	return tree, nil
 }
 
+func (b *badgerDB) takeSnapshot() (Hash, error) {
+	topKey, err := b.get(RootKey)
+	if err != nil {
+		return NullHash, fmt.Errorf("failed to get root key: %w", err)
+	}
+
+	tree, err := b.fetchTrees(topKey)
+	if err != nil {
+		return NullHash, fmt.Errorf("failed fetchTrees: %w", err)
+	}
+
+	wb := b.newWriteBatch()
+	defer wb.cancel()
+
+	committer := newCommitter(wb, 0, 0)
+	if err := tree.commitsSnapshot(committer); err != nil {
+		return NullHash, err
+	}
+
+	if err := b.commitWriteBatch(wb); err != nil {
+		return NullHash, err
+	}
+
+	var h Hash
+	copy(h[:], topKey)
+
+	return h, nil
+}
+
 type badgerWriteBatch struct {
 	batch *badger.WriteBatch
 }

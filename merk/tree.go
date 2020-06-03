@@ -211,11 +211,8 @@ func (t *Tree) verify() error {
 	return handler(t.link(false), func(l Link) bool { return string(t.key()) >= string(l.key()) })
 }
 
-func (t *Tree) marshal() []byte {
-	var (
-		dst  []byte
-		hash Hash
-	)
+func (t *Tree) marshal(dst []byte) []byte {
+	var hash Hash
 
 	// write key
 	dst = bytesutil.AppendUint32BE(dst, uint32(len(t.key())))

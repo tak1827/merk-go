@@ -160,7 +160,9 @@ func TestTakeSnapshot(t *testing.T) {
 
 	var batch Batch = []*OP{
 		&OP{O: Del, K: []byte("key1")},
-		&OP{O: Del, K: []byte("key5")},
+		&OP{Put, []byte("key5"), []byte("value55")},
+		&OP{O: Del, K: []byte("key8")},
+		&OP{Put, []byte("key10"), []byte("value10")},
 	}
 	m.Apply(batch)
 
@@ -169,6 +171,7 @@ func TestTakeSnapshot(t *testing.T) {
 
 	require.NoError(t, m.tree.verify())
 	require.EqualValues(t, m.tree.key(), []byte("key5"))
+	require.EqualValues(t, m.tree.value(), []byte("value5"))
 	require.EqualValues(t, m.tree.link(true).key(), []byte("key2"))
 	require.EqualValues(t, m.tree.link(true).tree().link(true).key(), []byte("key1"))
 	require.EqualValues(t, m.tree.link(true).tree().link(true).tree().link(true).key(), []byte("key0"))

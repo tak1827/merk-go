@@ -2,7 +2,6 @@ package merk
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/lithdew/bytesutil"
 	"unsafe"
@@ -57,7 +56,7 @@ func (t *Tree) child(isLeft bool) *Tree {
 		var h Hash = l.hash()
 		child, err := gDB.fetchTree(h[:])
 		if err != nil {
-			panic(fmt.Sprintf("failed to fetch node: %v", err))
+			panic(fmt.Sprintf("BUG: failed to fetch node: %v", err))
 		}
 		return child
 	}
@@ -171,59 +170,7 @@ func (t *Tree) withValue(value []byte) {
 }
 
 func (t *Tree) commit(c *Commiter) error {
-	// Note: if use concurency, slow down when low spec pc
-	chErr := make(chan error, 2)
-
-	var left Link = t.link(true)
-	if left != nil && left.linkType() == ModifiedLink {
-		go func() {
-
-			if err := left.tree().commit(c); err != nil {
-				chErr <- err
-				return
-			}
-
-			t.setLink(true, &Stored{
-				ch: left.childHeights(),
-				t:  left.tree(),
-				h:  left.tree().hash(),
-			})
-
-			chErr <- nil
-		}()
-	} else {
-		chErr <- nil
-	}
-
-	var right Link = t.link(false)
-	if right != nil && right.linkType() == ModifiedLink {
-		go func() {
-			if err := right.tree().commit(c); err != nil {
-				chErr <- err
-				return
-			}
-
-			t.setLink(false, &Stored{
-				ch: right.childHeights(),
-				t:  right.tree(),
-				h:  right.tree().hash(),
-			})
-
-			chErr <- nil
-		}()
-	} else {
-		chErr <- nil
-	}
-
-	for i := 0; i < cap(chErr); i++ {
-		if err := <-chErr; err != nil {
-			return err
-		}
-	}
-
-	if err := c.write(t); err != nil {
-		return err
-	}
+	commitHandler(t, c, ModifiedLink)
 
 	if doPrune := c.prune(t); doPrune {
 		if t.link(true) != nil {
@@ -238,83 +185,30 @@ func (t *Tree) commit(c *Commiter) error {
 }
 
 func (t *Tree) commitsSnapshot(c *Commiter) error {
-	// Note: if use concurency, slow down when low spec pc
-	chErr := make(chan error, 2)
-
-	var left Link = t.link(true)
-	if left != nil {
-		if left.linkType() != StoredLink {
-			return errors.New("snopshot must be taken from stored tree")
-		}
-
-		go func() {
-			if err := left.tree().commit(c); err != nil {
-				chErr <- err
-				return
-			}
-			chErr <- nil
-		}()
-	} else {
-		chErr <- nil
-	}
-
-	var right Link = t.link(false)
-	if right != nil {
-		if right.linkType() != StoredLink {
-			return errors.New("snopshot must be taken from stored tree")
-		}
-
-		go func() {
-			if err := right.tree().commit(c); err != nil {
-				chErr <- err
-				return
-			}
-
-			chErr <- nil
-		}()
-	} else {
-		chErr <- nil
-	}
-
-	for i := 0; i < cap(chErr); i++ {
-		if err := <-chErr; err != nil {
-			return err
-		}
-	}
-
-	if err := c.write(t); err != nil {
-		return err
-	}
-
-	return nil
+	return commitHandler(t, c, StoredLink)
 }
 
 func (t *Tree) verify() error {
-	var left Link = t.link(true)
-	if left != nil {
-		if string(t.key()) <= string(left.key()) {
-			return fmt.Errorf("unbalanced tree :%v", t.key())
-		}
-		if left.linkType() != PrunedLink {
-			if err := left.tree().verify(); err != nil {
-				return err
+	handler := func(l Link, compare func(l Link) bool) error {
+		if l != nil {
+			if compare(l) {
+				return fmt.Errorf("unbalanced tree :%v", t.key())
+			}
+			if l.linkType() != PrunedLink {
+				if err := l.tree().verify(); err != nil {
+					return err
+				}
 			}
 		}
+		return nil
 	}
 
-	var right Link = t.link(false)
-	if right != nil {
-		if string(t.key()) >= string(right.key()) {
-			return fmt.Errorf("unbalanced tree :%v", t.key())
-		}
-		if right.linkType() != PrunedLink {
-			if err := right.tree().verify(); err != nil {
-				return err
-			}
-		}
+	err := handler(t.link(true), func(l Link) bool { return string(t.key()) <= string(l.key()) })
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return handler(t.link(false), func(l Link) bool { return string(t.key()) >= string(l.key()) })
 }
 
 func (t *Tree) marshal() []byte {
@@ -385,6 +279,48 @@ func unmarshalTree(buf []byte) *Tree {
 	t.kv.hash = kvHash(t.kv.key, t.kv.value)
 
 	return t
+}
+
+func commitHandler(t *Tree, c *Commiter, lType LinkType) error {
+	// Note: if use concurency, slow down when low spec pc
+	chErr := make(chan error, 2)
+
+	handler := func(l Link, isLeft bool) {
+		if l != nil && l.linkType() == lType {
+			go func() {
+
+				if err := l.tree().commit(c); err != nil {
+					chErr <- err
+					return
+				}
+
+				t.setLink(isLeft, &Stored{
+					ch: l.childHeights(),
+					t:  l.tree(),
+					h:  l.tree().hash(),
+				})
+
+				chErr <- nil
+			}()
+		} else {
+			chErr <- nil
+		}
+	}
+
+	handler(t.link(true), true)
+	handler(t.link(false), false)
+
+	for i := 0; i < cap(chErr); i++ {
+		if err := <-chErr; err != nil {
+			return err
+		}
+	}
+
+	if err := c.write(t); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func sideToStr(isLeft bool) string {

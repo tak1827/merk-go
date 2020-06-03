@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"math"
 	"strings"
 )
@@ -166,8 +165,6 @@ func (m *Merk) Revert(snapshotKey Hash) error {
 	}
 
 	tree, err := gDB.fetchTrees(snapshotKey[:])
-	spew.Dump(snapshotKey)
-	spew.Dump(tree)
 	if err != nil {
 		return err
 	}

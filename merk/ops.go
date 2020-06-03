@@ -104,33 +104,28 @@ func recurse(tree *Tree, batch Batch, mid int, exclusive bool) (*Tree, [][]byte,
 	// Note: if use concurency, slow down when low spec pc
 	chErr := make(chan error, 2)
 
-	if len(leftBatch) != 0 {
-		go func() {
+	handler := func(isLeft bool, b Batch) {
+		if len(b) != 0 {
+			go func() {
 
-			err := tree.walk(true, func(maybeLeft *Tree) (*Tree, error) {
-				maybeLeft, deletedKeys, err := applyTo(maybeLeft, leftBatch)
-				deletedKeysLeft = append(deletedKeysLeft, deletedKeys...)
-				return maybeLeft, err
-			})
-			chErr <- err
-		}()
-	} else {
-		chErr <- nil
+				err := tree.walk(isLeft, func(maybeTree *Tree) (*Tree, error) {
+					maybeTree, deletedKeys, err := applyTo(maybeTree, b)
+					if isLeft {
+						deletedKeysLeft = append(deletedKeysLeft, deletedKeys...)
+					} else {
+						deletedKeysRight = append(deletedKeysRight, deletedKeys...)
+					}
+					return maybeTree, err
+				})
+				chErr <- err
+			}()
+		} else {
+			chErr <- nil
+		}
 	}
 
-	if len(rightBatch) != 0 {
-		go func() {
-
-			err := tree.walk(false, func(maybeRight *Tree) (*Tree, error) {
-				maybeRight, deletedKeys, err := applyTo(maybeRight, rightBatch)
-				deletedKeysRight = append(deletedKeysRight, deletedKeys...)
-				return maybeRight, err
-			})
-			chErr <- err
-		}()
-	} else {
-		chErr <- nil
-	}
+	handler(true, leftBatch)
+	handler(false, rightBatch)
 
 	for i := 0; i < cap(chErr); i++ {
 		if err := <-chErr; err != nil {

@@ -3,23 +3,7 @@ package merk
 import (
 	"fmt"
 	"math"
-	"sort"
 )
-
-type OPType uint8
-
-const (
-	Put OPType = 1 << iota
-	Del
-)
-
-type OP struct {
-	O OPType
-	K []byte
-	V []byte
-}
-
-type Batch []*OP
 
 func applyTo(maybeTree *Tree, batch Batch) (*Tree, [][]byte, error) {
 	if maybeTree == nil {
@@ -236,11 +220,4 @@ func removeEdge(t *Tree, isLeft bool) (*Tree, *Tree) {
 	tree = maybeBalance(tree)
 
 	return edge, tree
-}
-
-func sortBatch(b Batch) Batch {
-	sort.SliceStable(b, func(i, j int) bool {
-		return string(b[i].K) < string(b[j].K)
-	})
-	return b
 }

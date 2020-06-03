@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"math"
+	// "math"
 	"strings"
 )
 
@@ -58,33 +58,32 @@ func (m *Merk) Get(key []byte) []byte {
 }
 
 func (m *Merk) RootHash() Hash {
-	if m.tree != nil {
-		return m.tree.hash()
-	} else {
+	if m.tree == nil {
 		return NullHash
 	}
+	return m.tree.hash()
 }
 
 func (m *Merk) Apply(batch Batch) ([][]byte, error) {
-	var prevKey []byte
-	for i := 0; i < len(batch); i++ {
-		// ensure keys in batch are sorted and unique
-		if bytes.Compare(batch[i].K, prevKey) == -1 {
-			return nil, errors.New("keys in batch must be sorted")
-		} else if bytes.Equal(batch[i].K, prevKey) {
-			return nil, fmt.Errorf("keys in batch must be unique, %v", batch[i].K)
-		}
-		// ensure size of keys and values less than limit
-		if uint32(len(batch[i].K)) > uint32(math.MaxUint32) {
-			return nil, fmt.Errorf("Too long, key: %v ", batch[i].K)
-		}
-		if uint32(len(batch[i].V)) > uint32(math.MaxUint32) {
-			return nil, fmt.Errorf("too long, value: %v ", batch[i].V)
-		}
-
-		prevKey = batch[i].K
-	}
-
+	// Note: batch validation
+	// var prevKey []byte
+	// for i := 0; i < len(batch); i++ {
+	// 	// ensure keys in batch are sorted and unique
+	// 	if bytes.Compare(batch[i].K, prevKey) == -1 {
+	// 		return nil, errors.New("keys in batch must be sorted")
+	// 	} else if bytes.Equal(batch[i].K, prevKey) {
+	// 		return nil, fmt.Errorf("keys in batch must be unique, %v", batch[i].K)
+	// 	}
+	// 	// ensure size of keys and values less than limit
+	// 	if uint32(len(batch[i].K)) > uint32(math.MaxUint32) {
+	// 		return nil, fmt.Errorf("Too long, key: %v ", batch[i].K)
+	// 	}
+	// 	if uint32(len(batch[i].V)) > uint32(math.MaxUint32) {
+	// 		return nil, fmt.Errorf("too long, value: %v ", batch[i].V)
+	// 	}
+	// 	prevKey = batch[i].K
+	// }
+	batch = sortBatch(batch)
 	return m.ApplyUnchecked(batch)
 }
 
@@ -159,18 +158,18 @@ func (m *Merk) Commit(deletedKeys [][]byte) error {
 	return nil
 }
 
-func (m *Merk) Revert(snapshotKey Hash) error {
+func (m *Merk) Revert(snapshotKey Hash) (err error) {
 	if gDB == nil {
-		return errors.New("db is not open")
+		err = errors.New("db is not open")
+		return
 	}
 
-	tree, err := gDB.fetchTrees(snapshotKey[:])
+	m.tree, err = gDB.fetchTrees(snapshotKey[:])
 	if err != nil {
-		return err
+		return
 	}
-	m.tree = tree
 
-	return nil
+	return
 }
 
 // Take snapshot from current stored tree

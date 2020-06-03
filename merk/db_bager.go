@@ -141,24 +141,24 @@ func (b *badgerDB) fetchTrees(key []byte) (*Tree, error) {
 		return nil, err
 	}
 
-	var leftLink Link = tree.link(true)
-	if leftLink != nil {
-		h = leftLink.hash()
-		leftTree, err := b.fetchTrees(h[:])
-		if err != nil {
-			return nil, err
+	handler := func(isLeft bool, l Link) error {
+		if l != nil {
+			h = l.hash()
+			t, err := b.fetchTrees(h[:])
+			if err != nil {
+				return err
+			}
+
+			tree.setLink(isLeft, l.intoStored(t))
 		}
-		tree.setLink(true, leftLink.intoStored(leftTree))
+		return nil
 	}
 
-	var rightLink Link = tree.link(false)
-	if rightLink != nil {
-		h = rightLink.hash()
-		rightTree, err := b.fetchTrees(h[:])
-		if err != nil {
-			return nil, err
-		}
-		tree.setLink(false, rightLink.intoStored(rightTree))
+	if err := handler(true, tree.link(true)); err != nil {
+		return nil, err
+	}
+	if err := handler(false, tree.link(false)); err != nil {
+		return nil, err
 	}
 
 	return tree, nil

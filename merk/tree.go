@@ -41,9 +41,9 @@ func (t *Tree) link(isLeft bool) Link {
 func (t *Tree) setLink(isLeft bool, link Link) {
 	if isLeft {
 		t.left = link
-		return
+	} else {
+		t.right = link
 	}
-	t.right = link
 }
 
 func (t *Tree) child(isLeft bool) *Tree {

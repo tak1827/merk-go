@@ -48,5 +48,5 @@ func (s *Stored) intoPruned() Link {
 }
 
 func (s *Stored) intoStored(tree *Tree) Link {
-	panic("BUG: cannot restore from Stored tree")
+	return s
 }

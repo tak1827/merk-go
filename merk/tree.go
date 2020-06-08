@@ -38,14 +38,6 @@ func (t *Tree) Link(isLeft bool) Link {
 	return t.right
 }
 
-func (t *Tree) setLink(isLeft bool, link Link) {
-	if isLeft {
-		t.left = link
-	} else {
-		t.right = link
-	}
-}
-
 func (t *Tree) Child(isLeft bool) *Tree {
 	var l Link = t.Link(isLeft)
 	if l == nil {
@@ -64,7 +56,7 @@ func (t *Tree) Child(isLeft bool) *Tree {
 	return l.tree()
 }
 
-func (t *Tree) childHash(isLeft bool) Hash {
+func (t *Tree) ChildHash(isLeft bool) Hash {
 	var l Link = t.Link(isLeft)
 	if l == nil {
 		return NullHash
@@ -74,10 +66,10 @@ func (t *Tree) childHash(isLeft bool) Hash {
 }
 
 func (t *Tree) Hash() Hash {
-	return NodeHash(t.KvHash(), t.childHash(true), t.childHash(false))
+	return NodeHash(t.KvHash(), t.ChildHash(true), t.ChildHash(false))
 }
 
-func (t *Tree) childHeight(isLeft bool) uint8 {
+func (t *Tree) ChildHeight(isLeft bool) uint8 {
 	var l Link = t.Link(isLeft)
 	if l == nil {
 		return 0
@@ -85,18 +77,26 @@ func (t *Tree) childHeight(isLeft bool) uint8 {
 	return l.height()
 }
 
-func (t *Tree) childHeights() [2]uint8 {
-	childHeights := [2]uint8{t.childHeight(true), t.childHeight(false)}
+func (t *Tree) ChildHeights() [2]uint8 {
+	childHeights := [2]uint8{t.ChildHeight(true), t.ChildHeight(false)}
 	return childHeights
 }
 
 func (t *Tree) height() uint8 {
-	heights := []uint8{t.childHeight(true), t.childHeight(false)}
+	heights := []uint8{t.ChildHeight(true), t.ChildHeight(false)}
 	return 1 + max(heights)
 }
 
+func (t *Tree) setLink(isLeft bool, link Link) {
+	if isLeft {
+		t.left = link
+	} else {
+		t.right = link
+	}
+}
+
 func (t *Tree) balanceFactor() int8 {
-	return int8(t.childHeight(false) - t.childHeight(true))
+	return int8(t.ChildHeight(false) - t.ChildHeight(true))
 }
 
 func (t *Tree) attach(isLeft bool, maybeChild *Tree) {
@@ -292,7 +292,7 @@ func commitHandler(t *Tree, c *Commiter, lType LinkType) error {
 				}
 
 				t.setLink(isLeft, &Stored{
-					ch: l.childHeights(),
+					ch: l.ChildHeights(),
 					t:  l.tree(),
 					h:  l.tree().Hash(),
 				})

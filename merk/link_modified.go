@@ -11,7 +11,7 @@ func (m *Modified) linkType() LinkType {
 	return ModifiedLink
 }
 
-func (m *Modified) childHeights() [2]uint8 {
+func (m *Modified) ChildHeights() [2]uint8 {
 	return m.ch
 }
 
@@ -48,7 +48,7 @@ func (m *Modified) intoStored(tree *Tree) Link {
 
 func fromModifiedTree(tree *Tree) *Modified {
 	return &Modified{
-		ch: tree.childHeights(),
+		ch: tree.ChildHeights(),
 		t:  tree,
 	}
 }

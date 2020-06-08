@@ -12,7 +12,7 @@ func (s *Stored) linkType() LinkType {
 	return StoredLink
 }
 
-func (s *Stored) childHeights() [2]uint8 {
+func (s *Stored) ChildHeights() [2]uint8 {
 	return s.ch
 }
 

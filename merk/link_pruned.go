@@ -12,7 +12,7 @@ func (p *Pruned) linkType() LinkType {
 	return PrunedLink
 }
 
-func (p *Pruned) childHeights() [2]uint8 {
+func (p *Pruned) ChildHeights() [2]uint8 {
 	return p.ch
 }
 
@@ -45,7 +45,7 @@ func (p *Pruned) intoPruned() Link {
 
 func (p *Pruned) intoStored(tree *Tree) Link {
 	return &Stored{
-		ch: tree.childHeights(),
+		ch: tree.ChildHeights(),
 		t:  tree,
 		h:  p.h,
 	}

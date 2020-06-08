@@ -192,7 +192,7 @@ func remove(tree *Tree) *Tree {
 		return nil
 	}
 
-	isLeft = tree.childHeight(true) > tree.childHeight(false)
+	isLeft = tree.ChildHeight(true) > tree.ChildHeight(false)
 
 	// single child
 	if !(hasLeft && hasRight) {

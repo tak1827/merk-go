@@ -11,7 +11,7 @@ const (
 type Link interface {
 	linkType() LinkType
 
-	childHeights() [2]uint8
+	ChildHeights() [2]uint8
 	tree() *Tree
 	key() []byte
 	Hash() Hash

@@ -64,29 +64,6 @@ func (o *OP) encodeOP(output []byte) []byte {
 	}
 }
 
-// func (o *OP) encodeLen() int {
-// 	switch o.t {
-// 	case Push:
-// 		if o.n.t == Hash {
-// 			return 1 + m.HashSize
-// 		}
-
-// 		if o.n.t == KVHash {
-// 			return 1 + m.HashSize
-// 		}
-
-// 		return 9 + len(o.n.k) + len(o.n.v)
-
-// 	case Parent:
-// 		return 1
-
-// 	case Child:
-// 		return 1
-// 	default:
-// 		panic("BUG: undefined proof op type")
-// 	}
-// }
-
 func encode(ops []*OP) (buf []byte) {
 	for _, op := range ops {
 		buf = append(buf, op.encodeOP(nil)...)

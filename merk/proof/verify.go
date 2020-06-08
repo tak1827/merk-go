@@ -3,11 +3,8 @@ package proof
 import (
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	m "github.com/tak1827/merk-go/merk"
 )
-
-var treeMap map[string]*Tree
 
 type Tree struct {
 	node  *Node
@@ -16,9 +13,7 @@ type Tree struct {
 }
 
 func newTree(n *Node) (t *Tree) {
-	t = &Tree{node: n}
-	t.intoMap()
-	return
+	return &Tree{node: n}
 }
 
 func (t *Tree) child(isLeft bool) *Tree {
@@ -26,14 +21,6 @@ func (t *Tree) child(isLeft bool) *Tree {
 		return t.left
 	}
 	return t.right
-}
-
-func (t *Tree) intoMap() {
-	if t.node.t == Hash || t.node.t == KVHash {
-		treeMap[string(t.node.h[:])] = t
-	} else {
-		treeMap[string(t.node.k[:])] = t
-	}
 }
 
 func (t *Tree) setChild(isLeft bool, child *Tree) {
@@ -61,7 +48,7 @@ func (t *Tree) childHash(isLeft bool) m.Hash {
 	return child.hash()
 }
 
-func (t *Tree) intoHash() (hashTree *Tree) {
+func (t *Tree) intoHash() *Tree {
 	hashNode := func(tree *Tree, kvHash m.Hash) *Node {
 		h := m.NodeHash(
 			kvHash,
@@ -73,18 +60,12 @@ func (t *Tree) intoHash() (hashTree *Tree) {
 
 	switch t.node.t {
 	case Hash:
-		hashTree = &Tree{node: t.node}
-		hashTree.intoMap()
-		return
+		return &Tree{node: t.node}
 	case KVHash:
-		hashTree = &Tree{node: hashNode(t, t.node.h)}
-		hashTree.intoMap()
-		return
+		return &Tree{node: hashNode(t, t.node.h)}
 	case KV:
 		kvh := m.KvHash(t.node.k, t.node.v)
-		hashTree = &Tree{node: hashNode(t, kvh)}
-		hashTree.intoMap()
-		return
+		return &Tree{node: hashNode(t, kvh)}
 	default:
 		panic("BUG: undefined tree note type")
 	}
@@ -99,107 +80,54 @@ func (t *Tree) hash() (h m.Hash) {
 
 func verify(buf []byte, keys [][]byte, expectedHash m.Hash) ([][]byte, error) {
 	var (
-		stack  []*Tree
-		output [][]byte
-		op     *OP
-		key    []byte
-		// parent, child *Tree
+		op            *OP
+		stack         []*Tree
+		output        [][]byte
+		parent, child *Tree
+		key           []byte
+		keyIndex      int
+		lastPush      *Node
 	)
 
-	treeMap = make(map[string]*Tree)
-
-	var keyIndex = 0
-	var lastPush *Node
-
-	tryPop := func(s []*Tree) (*Tree, []*Tree) {
+	pop := func(s []*Tree) (*Tree, []*Tree) {
 		if len(s) == 0 {
 			panic("BUG: stack underflow")
 		}
 		target := s[len(s)-1]
-		// rest := s[:len(s)-1]
+
 		rest := make([]*Tree, len(s)-1)
 		copy(rest, s[:len(s)-1])
+
 		return target, rest
 	}
-
-	var kim int = 1
 
 	for {
 		if len(buf) <= 0 {
 			break
 		}
 
-		// spew.Dump("++++++++++++++++++++++++++++++++++++++++")
-		// spew.Dump(len(stack))
-
 		op, buf = decode(buf)
 		switch op.t {
 		case Parent:
-			// var parent, child *Tree
-			fmt.Println("Parent")
-			parent := stack[len(stack)-1]
-			child := stack[len(stack)-2]
+			parent, stack = pop(stack)
+			child, stack = pop(stack)
 			parent.attach(true, child)
-			_, stack = tryPop(stack)
-			_, stack = tryPop(stack)
-			// stack := stack[:len(stack)-2]
 			stack = append(stack, parent)
-
-			// spew.Dump("---------------------- 1")
-			// spew.Dump(len(stack))
-			// spew.Dump(stack)
 
 		case Child:
-			// var parent, child *Tree
-			fmt.Println("Child")
-			child := stack[len(stack)-1]
-			parent := stack[len(stack)-2]
+			child, stack = pop(stack)
+			parent, stack = pop(stack)
 			parent.attach(false, child)
-			_, stack = tryPop(stack)
-			_, stack = tryPop(stack)
-			// stack := stack[:len(stack)-2]
 			stack = append(stack, parent)
 
-			spew.Dump("---------------------- 2")
-
-			// if kim == 2 {
-			// 	spew.Dump(")))))")
-			// 	// spew.Dump(parent)
-			// 	spew.Dump(stack)
-			// 	spew.Dump(stack[0].intoHash())
-			// 	panic("child")
-			// }
-
-			kim++
-
 		case Push:
-			if op.n.t == Hash {
-				fmt.Printf("Push::Hash %v\n", op.n.h)
-			}
-
-			if op.n.t == KVHash {
-				fmt.Printf("Push::KVHash %v\n", op.n.h)
-			}
-
-			if op.n.t == KV {
-				fmt.Printf("Push::KV %v\n", string(op.n.k))
-			}
-
-			// spew.Dump("---------------------- 3")
-			// spew.Dump(stack)
-
-			pushTree := &Tree{node: op.n}
-			pushTree.intoMap()
-			stack = append(stack, pushTree)
-
-			// spew.Dump("---------------------- 4")
-			// spew.Dump(stack)
+			stack = append(stack, &Tree{node: op.n})
 
 			if op.n.t == KV {
 				key = op.n.k
 
 				if lastPush != nil && lastPush.t == KV && string(key) <= string(lastPush.k) {
-					panic("BUG: incorrect key ordering")
+					return nil, fmt.Errorf("incorrect key ordering key: %v", string(key))
 				}
 
 				for {
@@ -208,9 +136,6 @@ func verify(buf []byte, keys [][]byte, expectedHash m.Hash) ([][]byte, error) {
 					} else if string(key) == string(keys[keyIndex]) {
 						// KV for queried key
 						output = append(output, op.n.v)
-						// 			spew.Dump("----------------------")
-						// spew.Dump(stack)
-						// panic("fuga")
 					} else if string(key) > string(keys[keyIndex]) {
 						if lastPush == nil {
 							// previous push was a boundary (global edge or lower key),
@@ -218,7 +143,7 @@ func verify(buf []byte, keys [][]byte, expectedHash m.Hash) ([][]byte, error) {
 							output = append(output, []byte{})
 						} else {
 							// proof is incorrect since it skipped queried keys
-							panic("BUG: proof incorrectly formed")
+							return nil, fmt.Errorf("proof incorrectly formed key: %v", key)
 						}
 					}
 
@@ -232,12 +157,6 @@ func verify(buf []byte, keys [][]byte, expectedHash m.Hash) ([][]byte, error) {
 			panic("BUG: undefined proof OP type")
 		}
 	}
-
-	spew.Dump("*********************")
-	spew.Dump(len(stack))
-	spew.Dump(stack)
-
-	// panic("path here")
 
 	// absence proofs for right edge
 	if keyIndex < len(keys) {
@@ -257,11 +176,8 @@ func verify(buf []byte, keys [][]byte, expectedHash m.Hash) ([][]byte, error) {
 		return nil, errors.New("expected proof to result in exactly one stack item")
 	}
 
-	// root, _ := tryPop(stack)
 	root := stack[len(stack)-1]
 	hash := root.intoHash().hash()
-
-	spew.Dump(output)
 
 	if hash != expectedHash {
 		return nil, fmt.Errorf("proof did not match expected hash, expected: %v, actual: %v", expectedHash, hash)

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	// "math"
+	"math"
 	"strings"
 )
 
@@ -65,25 +65,25 @@ func (m *Merk) RootHash() Hash {
 }
 
 func (m *Merk) Apply(batch Batch) ([][]byte, error) {
-	// Note: batch validation
-	// var prevKey []byte
-	// for i := 0; i < len(batch); i++ {
-	// 	// ensure keys in batch are sorted and unique
-	// 	if bytes.Compare(batch[i].K, prevKey) == -1 {
-	// 		return nil, errors.New("keys in batch must be sorted")
-	// 	} else if bytes.Equal(batch[i].K, prevKey) {
-	// 		return nil, fmt.Errorf("keys in batch must be unique, %v", batch[i].K)
-	// 	}
-	// 	// ensure size of keys and values less than limit
-	// 	if uint32(len(batch[i].K)) > uint32(math.MaxUint32) {
-	// 		return nil, fmt.Errorf("Too long, key: %v ", batch[i].K)
-	// 	}
-	// 	if uint32(len(batch[i].V)) > uint32(math.MaxUint32) {
-	// 		return nil, fmt.Errorf("too long, value: %v ", batch[i].V)
-	// 	}
-	// 	prevKey = batch[i].K
-	// }
-	batch = sortBatch(batch)
+	var prevKey []byte
+	for i := 0; i < len(batch); i++ {
+		// ensure keys in batch are sorted and unique
+		if bytes.Compare(batch[i].K, prevKey) == -1 {
+			return nil, errors.New("keys in batch must be sorted")
+		} else if bytes.Equal(batch[i].K, prevKey) {
+			return nil, fmt.Errorf("keys in batch must be unique, %v", batch[i].K)
+		}
+		// ensure size of keys and values less than limit
+		if uint32(len(batch[i].K)) > uint32(math.MaxUint32) {
+			return nil, fmt.Errorf("Too long, key: %v ", batch[i].K)
+		}
+		if uint32(len(batch[i].V)) > uint32(math.MaxUint32) {
+			return nil, fmt.Errorf("too long, value: %v ", batch[i].V)
+		}
+		prevKey = batch[i].K
+	}
+
+	// batch = sortBatch(batch)
 	return m.ApplyUnchecked(batch)
 }
 

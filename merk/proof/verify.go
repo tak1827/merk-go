@@ -78,7 +78,7 @@ func (t *Tree) hash() (h m.Hash) {
 	return t.node.h
 }
 
-func verify(buf []byte, keys [][]byte, expectedHash m.Hash) ([][]byte, error) {
+func Verify(buf []byte, keys [][]byte, expectedHash m.Hash) ([][]byte, error) {
 	var (
 		op            *OP
 		stack         []*Tree

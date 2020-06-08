@@ -1,8 +1,35 @@
 package proof
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	m "github.com/tak1827/merk-go/merk"
 )
+
+func Prove(tree *m.Tree, keys [][]byte) ([]byte, error) {
+	if tree == nil {
+		return nil, errors.New("cannot create proof for empty tree")
+	}
+
+	// ensure keys are sorted and unique
+	var prevKey []byte
+	for _, key := range keys {
+		if bytes.Compare(key, prevKey) == -1 {
+			return nil, errors.New("keys in batch must be sorted")
+		} else if bytes.Equal(key, prevKey) {
+			return nil, fmt.Errorf("keys in batch must be unique, %v", key)
+		}
+		prevKey = key
+	}
+
+	return ProveUnchecked(tree, keys), nil
+}
+
+func ProveUnchecked(tree *m.Tree, keys [][]byte) []byte {
+	ops, _ := createProof(tree, keys)
+	return encode(ops)
+}
 
 func createProof(tree *m.Tree, keys [][]byte) ([]*OP, []bool) {
 	var leftKeys, rightKeys [][]byte

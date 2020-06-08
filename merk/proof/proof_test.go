@@ -11,7 +11,6 @@ const testDBDir string = "../../storage/proofmerk"
 func TestProof(t *testing.T) {
 	var (
 		keys   [][]byte
-		ops    []*OP
 		buf    []byte
 		output [][]byte
 		err    error
@@ -22,58 +21,58 @@ func TestProof(t *testing.T) {
 	defer db.Destroy()
 
 	keys = [][]byte{[]byte("key08")}
-	ops, _ = createProof(tree, keys)
-	buf = encode(ops)
-	output, err = verify(buf, keys, tree.Hash())
+	buf, err = Prove(tree, keys)
+	require.NoError(t, err)
+	output, err = Verify(buf, keys, tree.Hash())
 	require.NoError(t, err)
 	require.EqualValues(t, [][]byte{[]byte("value08")}, output)
 
 	keys = [][]byte{[]byte("key15")}
-	ops, _ = createProof(tree, keys)
-	buf = encode(ops)
-	output, err = verify(buf, keys, tree.Hash())
+	buf, err = Prove(tree, keys)
+	require.NoError(t, err)
+	output, err = Verify(buf, keys, tree.Hash())
 	require.NoError(t, err)
 	require.EqualValues(t, [][]byte{[]byte("value15")}, output)
 
 	keys = [][]byte{[]byte("key01")}
-	ops, _ = createProof(tree, keys)
-	buf = encode(ops)
-	output, err = verify(buf, keys, tree.Hash())
+	buf, err = Prove(tree, keys)
+	require.NoError(t, err)
+	output, err = Verify(buf, keys, tree.Hash())
 	require.NoError(t, err)
 	require.EqualValues(t, [][]byte{[]byte("value01")}, output)
 
 	keys = [][]byte{[]byte("key01"), []byte("key15")}
-	ops, _ = createProof(tree, keys)
-	buf = encode(ops)
-	output, err = verify(buf, keys, tree.Hash())
+	buf, err = Prove(tree, keys)
+	require.NoError(t, err)
+	output, err = Verify(buf, keys, tree.Hash())
 	require.NoError(t, err)
 	require.EqualValues(t, [][]byte{[]byte("value01"), []byte("value15")}, output)
 
 	keys = [][]byte{[]byte("key01"), []byte("key02"), []byte("key03"), []byte("key04")}
-	ops, _ = createProof(tree, keys)
-	buf = encode(ops)
-	output, err = verify(buf, keys, tree.Hash())
+	buf, err = Prove(tree, keys)
+	require.NoError(t, err)
+	output, err = Verify(buf, keys, tree.Hash())
 	require.NoError(t, err)
 	require.EqualValues(t, [][]byte{[]byte("value01"), []byte("value02"), []byte("value03"), []byte("value04")}, output)
 
 	keys = [][]byte{[]byte("key06"), []byte("key10"), []byte("key15")}
-	ops, _ = createProof(tree, keys)
-	buf = encode(ops)
-	output, err = verify(buf, keys, tree.Hash())
+	buf, err = Prove(tree, keys)
+	require.NoError(t, err)
+	output, err = Verify(buf, keys, tree.Hash())
 	require.NoError(t, err)
 	require.EqualValues(t, [][]byte{[]byte("value06"), []byte("value10"), []byte("value15")}, output)
 
 	keys = [][]byte{[]byte("key01"), []byte("key03"), []byte("key09"), []byte("key12"), []byte("key14")}
-	ops, _ = createProof(tree, keys)
-	buf = encode(ops)
-	output, err = verify(buf, keys, tree.Hash())
+	buf, err = Prove(tree, keys)
+	require.NoError(t, err)
+	output, err = Verify(buf, keys, tree.Hash())
 	require.NoError(t, err)
 	require.EqualValues(t, [][]byte{[]byte("value01"), []byte("value03"), []byte("value09"), []byte("value12"), []byte("value14")}, output)
 
 	keys = [][]byte{[]byte("key02"), []byte("key03"), []byte("key05"), []byte("key07"), []byte("key09"), []byte("key10"), []byte("key12"), []byte("key13"), []byte("key15")}
-	ops, _ = createProof(tree, keys)
-	buf = encode(ops)
-	output, err = verify(buf, keys, tree.Hash())
+	buf, err = Prove(tree, keys)
+	require.NoError(t, err)
+	output, err = Verify(buf, keys, tree.Hash())
 	require.NoError(t, err)
 	require.EqualValues(t, [][]byte{[]byte("value02"), []byte("value03"), []byte("value05"), []byte("value07"), []byte("value09"), []byte("value10"), []byte("value12"), []byte("value13"), []byte("value15")}, output)
 }

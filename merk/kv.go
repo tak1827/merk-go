@@ -7,6 +7,6 @@ type KV struct {
 }
 
 func newKV(key, value []byte) *KV {
-	hash := kvHash(key, value)
+	hash := KvHash(key, value)
 	return &KV{key, value, hash}
 }

@@ -14,7 +14,7 @@ type Link interface {
 	childHeights() [2]uint8
 	tree() *Tree
 	key() []byte
-	hash() Hash
+	Hash() Hash
 
 	height() uint8
 	balanceFactor() int8

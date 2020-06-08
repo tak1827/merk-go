@@ -18,17 +18,17 @@ func max(a []uint8) uint8 {
 	return max
 }
 
-func binarySearchBy(needle []byte, batch Batch) (bool, int) {
+func BinarySearch(needle []byte, keys [][]byte) (bool, int) {
 	low := 0
-	high := len(batch) - 1
+	high := len(keys) - 1
 
 	for low <= high {
 		median := (low + high) / 2
 
-		if bytes.Compare(batch[median].K, needle) == 0 {
+		if bytes.Compare(keys[median], needle) == 0 {
 			return true, median
 			// a < b
-		} else if bytes.Compare(batch[median].K, needle) == -1 {
+		} else if bytes.Compare(keys[median], needle) == -1 {
 			low = median + 1
 		} else {
 			high = median - 1

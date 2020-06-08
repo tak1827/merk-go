@@ -20,10 +20,10 @@ func (m *Modified) tree() *Tree {
 }
 
 func (m *Modified) key() []byte {
-	return m.t.key()
+	return m.t.Key()
 }
 
-func (m *Modified) hash() Hash {
+func (m *Modified) Hash() Hash {
 	return NullHash
 }
 

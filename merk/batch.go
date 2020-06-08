@@ -4,19 +4,6 @@ import (
 	"sort"
 )
 
-type OPType uint8
-
-const (
-	Put OPType = 1 << iota
-	Del
-)
-
-type OP struct {
-	O OPType
-	K []byte
-	V []byte
-}
-
 type Batch []*OP
 
 func sortBatch(b Batch) Batch {
@@ -24,4 +11,13 @@ func sortBatch(b Batch) Batch {
 		return string(b[i].K) < string(b[j].K)
 	})
 	return b
+}
+
+func binarySearchBatch(needle []byte, batch Batch) (bool, int) {
+	var keys [][]byte
+	for _, op := range batch {
+		keys = append(keys, op.K)
+	}
+
+	return BinarySearch(needle, keys)
 }

@@ -11,47 +11,47 @@ func TestMax(t *testing.T) {
 	require.EqualValues(t, max(data1), 5)
 }
 
-func TestBinarySearchBy(t *testing.T) {
+func TestBinarySearch(t *testing.T) {
 	var (
 		isFound bool
 		index   int
 	)
 
-	op0 := &OP{Put, []byte("0"), []byte("value")}
-	op1 := &OP{Put, []byte("1"), []byte("value")}
-	op2 := &OP{Put, []byte("2"), []byte("value")}
-	op3 := &OP{Put, []byte("3"), []byte("value")}
-	op4 := &OP{Put, []byte("4"), []byte("value")}
-	op5 := &OP{Put, []byte("5"), []byte("value")}
-	op6 := &OP{Put, []byte("6"), []byte("value")}
-	op7 := &OP{Put, []byte("7"), []byte("value")}
-	op8 := &OP{Put, []byte("8"), []byte("value")}
-	op9 := &OP{Put, []byte("9"), []byte("value")}
+	key0 := []byte("0")
+	key1 := []byte("1")
+	key2 := []byte("2")
+	key3 := []byte("3")
+	key4 := []byte("4")
+	key5 := []byte("5")
+	key6 := []byte("6")
+	key7 := []byte("7")
+	key8 := []byte("8")
+	key9 := []byte("9")
 
-	var batch1 Batch
-	batch1 = append(batch1, op1, op2, op4, op5, op6, op8)
+	var keys [][]byte
+	keys = append(keys, key1, key2, key4, key5, key6, key8)
 
-	isFound, index = binarySearchBy(op4.K, batch1)
+	isFound, index = BinarySearch(key4, keys)
 	require.True(t, isFound)
 	require.EqualValues(t, index, 2)
 
-	isFound, index = binarySearchBy(op8.K, batch1)
+	isFound, index = BinarySearch(key8, keys)
 	require.True(t, isFound)
 	require.EqualValues(t, index, 5)
 
-	isFound, index = binarySearchBy(op3.K, batch1)
+	isFound, index = BinarySearch(key3, keys)
 	require.True(t, !isFound)
 	require.EqualValues(t, index, 2)
 
-	isFound, index = binarySearchBy(op7.K, batch1)
+	isFound, index = BinarySearch(key7, keys)
 	require.True(t, !isFound)
 	require.EqualValues(t, index, 5)
 
-	isFound, index = binarySearchBy(op0.K, batch1)
+	isFound, index = BinarySearch(key0, keys)
 	require.True(t, !isFound)
 	require.EqualValues(t, index, 0)
 
-	isFound, index = binarySearchBy(op9.K, batch1)
+	isFound, index = BinarySearch(key9, keys)
 	require.True(t, !isFound)
 	require.EqualValues(t, index, 6)
 }

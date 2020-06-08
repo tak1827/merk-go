@@ -24,7 +24,7 @@ func (p *Pruned) key() []byte {
 	return p.k
 }
 
-func (p *Pruned) hash() Hash {
+func (p *Pruned) Hash() Hash {
 	return p.h
 }
 

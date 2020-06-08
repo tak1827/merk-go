@@ -9,7 +9,7 @@ import (
 )
 
 type Merk struct {
-	tree *Tree
+	Tree *Tree
 }
 
 func New(dir string) (*Merk, DB, error) {
@@ -35,18 +35,18 @@ func New(dir string) (*Merk, DB, error) {
 }
 
 func (m *Merk) Get(key []byte) []byte {
-	if m.tree == nil {
+	if m.Tree == nil {
 		return nil // empty tree
 	}
 
-	var cursor *Tree = m.tree
+	var cursor *Tree = m.Tree
 	for {
-		if bytes.Equal(key, cursor.key()) {
-			return cursor.value()
+		if bytes.Equal(key, cursor.Key()) {
+			return cursor.Value()
 		}
 
-		isLeft := bytes.Compare(key, cursor.key()) == -1
-		maybeChild := cursor.child(isLeft)
+		isLeft := bytes.Compare(key, cursor.Key()) == -1
+		maybeChild := cursor.Child(isLeft)
 		if maybeChild == nil {
 			break // not found
 		}
@@ -58,10 +58,10 @@ func (m *Merk) Get(key []byte) []byte {
 }
 
 func (m *Merk) RootHash() Hash {
-	if m.tree == nil {
+	if m.Tree == nil {
 		return NullHash
 	}
-	return m.tree.hash()
+	return m.Tree.Hash()
 }
 
 func (m *Merk) Apply(batch Batch) ([][]byte, error) {
@@ -98,7 +98,7 @@ func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 		return nil, errors.New("empty batch")
 	}
 
-	m.tree, deletedKeys, err = applyTo(m.tree, batch)
+	m.Tree, deletedKeys, err = applyTo(m.Tree, batch)
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +107,8 @@ func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 
 	// Note: don't execute for performance
 	// ensure tree valance
-	// if m.tree != nil {
-	// 	if err := m.tree.verify(); err != nil {
+	// if m.Tree != nil {
+	// 	if err := m.Tree.verify(); err != nil {
 	// 		return nil, err
 	// 	}
 	// }
@@ -125,7 +125,7 @@ func (m *Merk) Commit(deletedKeys [][]byte) error {
 	wb := gDB.newWriteBatch()
 	defer wb.cancel()
 
-	tree := m.tree
+	tree := m.Tree
 	if tree != nil {
 		committer := newCommitter(wb, tree.height(), DafaultLevels)
 		if err := tree.commit(committer); err != nil {
@@ -164,7 +164,7 @@ func (m *Merk) Revert(snapshotKey Hash) (err error) {
 		return
 	}
 
-	m.tree, err = gDB.fetchTrees(snapshotKey[:])
+	m.Tree, err = gDB.fetchTrees(snapshotKey[:])
 	if err != nil {
 		return
 	}

@@ -41,10 +41,10 @@ func TestUnMarshalTree(t *testing.T) {
 
 	tree := unmarshalTree(data)
 
-	require.EqualValues(t, tree.key(), []byte("key"))
-	require.EqualValues(t, tree.value(), []byte("value"))
-	require.EqualValues(t, tree.link(true).hash(), hash)
-	require.EqualValues(t, tree.link(false).hash(), hash)
+	require.EqualValues(t, tree.Key(), []byte("key"))
+	require.EqualValues(t, tree.Value(), []byte("value"))
+	require.EqualValues(t, tree.Link(true).Hash(), hash)
+	require.EqualValues(t, tree.Link(false).Hash(), hash)
 }
 
 func TestTreeCommit(t *testing.T) {
@@ -54,12 +54,12 @@ func TestTreeCommit(t *testing.T) {
 
 	tree.commit(committer)
 
-	require.EqualValues(t, tree.link(true).linkType(), StoredLink)
-	require.EqualValues(t, tree.link(true).hash(), Hash{0x4f, 0x85, 0x14, 0x8c, 0x5, 0x23, 0x93, 0xce, 0x97, 0xf1, 0x9, 0xdd, 0xc5, 0x49, 0x7b, 0x74, 0xf7, 0x41, 0x51, 0x2d, 0x5f, 0x3d, 0x6e, 0x95, 0x37, 0x4a, 0xf7, 0x75, 0x27, 0xff, 0x5d, 0x90})
-	require.EqualValues(t, tree.link(true).tree().link(true).linkType(), PrunedLink)
-	require.EqualValues(t, tree.link(true).tree().link(false).linkType(), PrunedLink)
-	require.EqualValues(t, tree.link(true).tree().link(true).key(), []byte("key0"))
-	require.EqualValues(t, tree.link(true).tree().link(false).key(), []byte("key2"))
+	require.EqualValues(t, tree.Link(true).linkType(), StoredLink)
+	require.EqualValues(t, tree.Link(true).Hash(), Hash{0x4f, 0x85, 0x14, 0x8c, 0x5, 0x23, 0x93, 0xce, 0x97, 0xf1, 0x9, 0xdd, 0xc5, 0x49, 0x7b, 0x74, 0xf7, 0x41, 0x51, 0x2d, 0x5f, 0x3d, 0x6e, 0x95, 0x37, 0x4a, 0xf7, 0x75, 0x27, 0xff, 0x5d, 0x90})
+	require.EqualValues(t, tree.Link(true).tree().Link(true).linkType(), PrunedLink)
+	require.EqualValues(t, tree.Link(true).tree().Link(false).linkType(), PrunedLink)
+	require.EqualValues(t, tree.Link(true).tree().Link(true).key(), []byte("key0"))
+	require.EqualValues(t, tree.Link(true).tree().Link(false).key(), []byte("key2"))
 }
 
 func TestVerify(t *testing.T) {

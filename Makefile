@@ -2,8 +2,8 @@ install:
 	go get -v -d ./merk/.
 
 fmt:
-	go fmt ./merk/
-	go vet ./merk/
+	go fmt ./merk/...
+	go vet ./merk/...
 
 test:
 	go test ./... -v -race -count=10

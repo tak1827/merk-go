@@ -19,19 +19,19 @@ func newTree(key, value []byte) *Tree {
 	}
 }
 
-func (t *Tree) key() []byte {
+func (t *Tree) Key() []byte {
 	return t.kv.key
 }
 
-func (t *Tree) value() []byte {
+func (t *Tree) Value() []byte {
 	return t.kv.value
 }
 
-func (t *Tree) kvHash() Hash {
+func (t *Tree) KvHash() Hash {
 	return t.kv.hash
 }
 
-func (t *Tree) link(isLeft bool) Link {
+func (t *Tree) Link(isLeft bool) Link {
 	if isLeft {
 		return t.left
 	}
@@ -46,14 +46,14 @@ func (t *Tree) setLink(isLeft bool, link Link) {
 	}
 }
 
-func (t *Tree) child(isLeft bool) *Tree {
-	var l Link = t.link(isLeft)
+func (t *Tree) Child(isLeft bool) *Tree {
+	var l Link = t.Link(isLeft)
 	if l == nil {
 		return nil
 	}
 
 	if l.linkType() == PrunedLink {
-		var h Hash = l.hash()
+		var h Hash = l.Hash()
 		child, err := gDB.fetchTree(h[:])
 		if err != nil {
 			panic(fmt.Sprintf("BUG: failed to fetch node: %v", err))
@@ -65,20 +65,20 @@ func (t *Tree) child(isLeft bool) *Tree {
 }
 
 func (t *Tree) childHash(isLeft bool) Hash {
-	var l Link = t.link(isLeft)
+	var l Link = t.Link(isLeft)
 	if l == nil {
 		return NullHash
 	}
 
-	return l.hash()
+	return l.Hash()
 }
 
-func (t *Tree) hash() Hash {
-	return nodeHash(t.kvHash(), t.childHash(true), t.childHash(false))
+func (t *Tree) Hash() Hash {
+	return NodeHash(t.KvHash(), t.childHash(true), t.childHash(false))
 }
 
 func (t *Tree) childHeight(isLeft bool) uint8 {
-	var l Link = t.link(isLeft)
+	var l Link = t.Link(isLeft)
 	if l == nil {
 		return 0
 	}
@@ -104,11 +104,11 @@ func (t *Tree) attach(isLeft bool, maybeChild *Tree) {
 		return
 	}
 
-	if bytes.Equal(maybeChild.key(), t.key()) {
-		panic(fmt.Sprintf("BUG: tried to attach tree with same key, %v", t.key()))
+	if bytes.Equal(maybeChild.Key(), t.Key()) {
+		panic(fmt.Sprintf("BUG: tried to attach tree with same key, %v", t.Key()))
 	}
 
-	if t.link(isLeft) != nil {
+	if t.Link(isLeft) != nil {
 		panic(fmt.Sprintf("BUG: tried to attach to %v tree slot, but it is already Some", sideToStr(isLeft)))
 	}
 
@@ -119,7 +119,7 @@ func (t *Tree) attach(isLeft bool, maybeChild *Tree) {
 }
 
 func (t *Tree) detach(isLeft bool) *Tree {
-	var slot Link = t.link(isLeft)
+	var slot Link = t.Link(isLeft)
 	if slot == nil {
 		return nil
 	}
@@ -127,7 +127,7 @@ func (t *Tree) detach(isLeft bool) *Tree {
 	t.setLink(isLeft, nil)
 
 	if slot.linkType() == PrunedLink {
-		var h Hash = slot.hash()
+		var h Hash = slot.Hash()
 		child, err := gDB.fetchTree(h[:])
 		if err != nil {
 			panic(fmt.Sprintf("failed to fetch node: %v", err))
@@ -166,17 +166,17 @@ func (t *Tree) walkExpect(isLeft bool, f func(tree *Tree) *Tree) {
 
 func (t *Tree) withValue(value []byte) {
 	t.kv.value = value
-	t.kv.hash = kvHash(t.kv.key, value)
+	t.kv.hash = KvHash(t.kv.key, value)
 }
 
 func (t *Tree) commit(c *Commiter) error {
 	commitHandler(t, c, ModifiedLink)
 
 	if doPrune := c.prune(t); doPrune {
-		if t.link(true) != nil {
+		if t.Link(true) != nil {
 			t.left = t.left.intoPruned()
 		}
-		if t.link(false) != nil {
+		if t.Link(false) != nil {
 			t.right = t.right.intoPruned()
 		}
 	}
@@ -192,7 +192,7 @@ func (t *Tree) verify() error {
 	handler := func(l Link, compare func(l Link) bool) error {
 		if l != nil {
 			if compare(l) {
-				return fmt.Errorf("unbalanced tree :%v", t.key())
+				return fmt.Errorf("unbalanced tree :%v", t.Key())
 			}
 			if l.linkType() != PrunedLink {
 				if err := l.tree().verify(); err != nil {
@@ -203,41 +203,41 @@ func (t *Tree) verify() error {
 		return nil
 	}
 
-	err := handler(t.link(true), func(l Link) bool { return string(t.key()) <= string(l.key()) })
+	err := handler(t.Link(true), func(l Link) bool { return string(t.Key()) <= string(l.key()) })
 	if err != nil {
 		return err
 	}
 
-	return handler(t.link(false), func(l Link) bool { return string(t.key()) >= string(l.key()) })
+	return handler(t.Link(false), func(l Link) bool { return string(t.Key()) >= string(l.key()) })
 }
 
 func (t *Tree) marshal(dst []byte) []byte {
 	var hash Hash
 
 	// write key
-	dst = bytesutil.AppendUint32BE(dst, uint32(len(t.key())))
-	dst = append(dst, t.key()...)
+	dst = bytesutil.AppendUint32BE(dst, uint32(len(t.Key())))
+	dst = append(dst, t.Key()...)
 
 	// write left link
-	if t.link(true) != nil {
+	if t.Link(true) != nil {
 		dst = append(dst, uint8(1))
-		hash = t.link(true).hash()
+		hash = t.Link(true).Hash()
 		dst = append(dst, hash[:]...)
 	} else {
 		dst = append(dst, uint8(0))
 	}
 
 	// write right link
-	if t.link(false) != nil {
+	if t.Link(false) != nil {
 		dst = append(dst, uint8(1))
-		hash = t.link(false).hash()
+		hash = t.Link(false).Hash()
 		dst = append(dst, hash[:]...)
 	} else {
 		dst = append(dst, uint8(0))
 	}
 
 	// write value
-	dst = append(dst, t.value()...)
+	dst = append(dst, t.Value()...)
 
 	return dst
 }
@@ -273,7 +273,7 @@ func unmarshalTree(buf []byte) *Tree {
 	t.kv.value = buf
 
 	// calculate hash
-	t.kv.hash = kvHash(t.kv.key, t.kv.value)
+	t.kv.hash = KvHash(t.kv.key, t.kv.value)
 
 	return t
 }
@@ -294,7 +294,7 @@ func commitHandler(t *Tree, c *Commiter, lType LinkType) error {
 				t.setLink(isLeft, &Stored{
 					ch: l.childHeights(),
 					t:  l.tree(),
-					h:  l.tree().hash(),
+					h:  l.tree().Hash(),
 				})
 
 				chErr <- nil
@@ -304,8 +304,8 @@ func commitHandler(t *Tree, c *Commiter, lType LinkType) error {
 		}
 	}
 
-	handler(t.link(true), true)
-	handler(t.link(false), false)
+	handler(t.Link(true), true)
+	handler(t.Link(false), false)
 
 	for i := 0; i < cap(chErr); i++ {
 		if err := <-chErr; err != nil {

@@ -143,7 +143,7 @@ func (b *badgerDB) fetchTrees(key []byte) (*Tree, error) {
 
 	handler := func(isLeft bool, l Link) error {
 		if l != nil {
-			h = l.hash()
+			h = l.Hash()
 			t, err := b.fetchTrees(h[:])
 			if err != nil {
 				return err
@@ -154,10 +154,10 @@ func (b *badgerDB) fetchTrees(key []byte) (*Tree, error) {
 		return nil
 	}
 
-	if err := handler(true, tree.link(true)); err != nil {
+	if err := handler(true, tree.Link(true)); err != nil {
 		return nil, err
 	}
-	if err := handler(false, tree.link(false)); err != nil {
+	if err := handler(false, tree.Link(false)); err != nil {
 		return nil, err
 	}
 

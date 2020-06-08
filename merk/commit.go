@@ -24,7 +24,7 @@ func (c *Commiter) write(tree *Tree) error {
 		return nil
 	}
 
-	var key Hash = tree.hash()
+	var key Hash = tree.Hash()
 
 	buf := c.pool.Get()
 	defer c.pool.Put(buf)

@@ -21,10 +21,10 @@ func (s *Stored) tree() *Tree {
 }
 
 func (s *Stored) key() []byte {
-	return s.t.key()
+	return s.t.Key()
 }
 
-func (s *Stored) hash() Hash {
+func (s *Stored) Hash() Hash {
 	return s.h
 }
 

@@ -23,16 +23,16 @@ func TestBuild(t *testing.T) {
 
 	tree, _ := build(b)
 
-	assert.EqualValues(t, []byte("5"), tree.key())
-	assert.EqualValues(t, []byte("2"), tree.child(true).key())
-	assert.EqualValues(t, []byte("1"), tree.child(true).child(true).key())
-	assert.EqualValues(t, []byte("0"), tree.child(true).child(true).child(true).key())
-	assert.EqualValues(t, []byte("4"), tree.child(true).child(false).key())
-	assert.EqualValues(t, []byte("3"), tree.child(true).child(false).child(true).key())
-	assert.EqualValues(t, []byte("8"), tree.child(false).key())
-	assert.EqualValues(t, []byte("7"), tree.child(false).child(true).key())
-	assert.EqualValues(t, []byte("6"), tree.child(false).child(true).child(true).key())
-	assert.EqualValues(t, []byte("9"), tree.child(false).child(false).key())
+	assert.EqualValues(t, []byte("5"), tree.Key())
+	assert.EqualValues(t, []byte("2"), tree.Child(true).Key())
+	assert.EqualValues(t, []byte("1"), tree.Child(true).Child(true).Key())
+	assert.EqualValues(t, []byte("0"), tree.Child(true).Child(true).Child(true).Key())
+	assert.EqualValues(t, []byte("4"), tree.Child(true).Child(false).Key())
+	assert.EqualValues(t, []byte("3"), tree.Child(true).Child(false).Child(true).Key())
+	assert.EqualValues(t, []byte("8"), tree.Child(false).Key())
+	assert.EqualValues(t, []byte("7"), tree.Child(false).Child(true).Key())
+	assert.EqualValues(t, []byte("6"), tree.Child(false).Child(true).Child(true).Key())
+	assert.EqualValues(t, []byte("9"), tree.Child(false).Child(false).Key())
 }
 
 func TestSortBatch(t *testing.T) {

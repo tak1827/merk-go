@@ -37,7 +37,7 @@ func TestApply(t *testing.T) {
 	batch3 = append(batch3, op4, op5, op7, op9)
 	m.Apply(batch3)
 
-	require.NoError(t, m.tree.verify())
+	require.NoError(t, m.Tree.verify())
 
 	/** Delete Case **/
 	op10 := &OP{O: Del, K: []byte("0")}
@@ -55,19 +55,19 @@ func TestApply(t *testing.T) {
 	delKeys4, _ := m.Apply(batch4)
 
 	require.EqualValues(t, [][]byte{[]byte("1"), []byte("5"), []byte("6"), []byte("9")}, delKeys4)
-	require.NoError(t, m.tree.verify())
+	require.NoError(t, m.Tree.verify())
 
 	batch5 = append(batch5, op12, op13, op17)
 	delKeys5, _ := m.Apply(batch5)
 
 	require.EqualValues(t, [][]byte{[]byte("2"), []byte("3"), []byte("7")}, delKeys5)
-	require.NoError(t, m.tree.verify())
+	require.NoError(t, m.Tree.verify())
 
 	batch6 = append(batch6, op10, op14, op18)
 	delKeys6, _ := m.Apply(batch6)
 
 	require.EqualValues(t, [][]byte{[]byte("0"), []byte("4"), []byte("8")}, delKeys6)
-	require.Nil(t, m.tree)
+	require.Nil(t, m.Tree)
 }
 
 func TestGet(t *testing.T) {
@@ -107,11 +107,11 @@ func TestCommit(t *testing.T) {
 	defer db.Close()
 	defer db.Destroy()
 
-	require.NoError(t, m.tree.verify())
-	require.EqualValues(t, PrunedLink, m.tree.child(true).link(true).linkType())
-	require.EqualValues(t, PrunedLink, m.tree.child(true).link(false).linkType())
-	require.EqualValues(t, PrunedLink, m.tree.child(false).link(true).linkType())
-	require.EqualValues(t, PrunedLink, m.tree.child(false).link(false).linkType())
+	require.NoError(t, m.Tree.verify())
+	require.EqualValues(t, PrunedLink, m.Tree.Child(true).Link(true).linkType())
+	require.EqualValues(t, PrunedLink, m.Tree.Child(true).Link(false).linkType())
+	require.EqualValues(t, PrunedLink, m.Tree.Child(false).Link(true).linkType())
+	require.EqualValues(t, PrunedLink, m.Tree.Child(false).Link(false).linkType())
 }
 
 func TestCommitFetchTree(t *testing.T) {
@@ -128,7 +128,7 @@ func TestCommitFetchTree(t *testing.T) {
 	defer db.Close()
 	defer db.Destroy()
 
-	require.NoError(t, m.tree.verify())
+	require.NoError(t, m.Tree.verify())
 }
 
 func TestCommitDel(t *testing.T) {
@@ -146,7 +146,7 @@ func TestCommitDel(t *testing.T) {
 	delKeys, _ := m.Apply(batch)
 
 	require.EqualValues(t, [][]byte{[]byte("key1"), []byte("key5"), []byte("key6"), []byte("key9")}, delKeys)
-	require.NoError(t, m.tree.verify())
+	require.NoError(t, m.Tree.verify())
 }
 
 func TestTakeSnapshot(t *testing.T) {
@@ -169,18 +169,18 @@ func TestTakeSnapshot(t *testing.T) {
 	err = m.Revert(snapshotKey)
 	require.NoError(t, err)
 
-	require.NoError(t, m.tree.verify())
-	require.EqualValues(t, m.tree.key(), []byte("key5"))
-	require.EqualValues(t, m.tree.value(), []byte("value5"))
-	require.EqualValues(t, m.tree.link(true).key(), []byte("key2"))
-	require.EqualValues(t, m.tree.link(true).tree().link(true).key(), []byte("key1"))
-	require.EqualValues(t, m.tree.link(true).tree().link(true).tree().link(true).key(), []byte("key0"))
-	require.EqualValues(t, m.tree.link(true).tree().link(false).key(), []byte("key4"))
-	require.EqualValues(t, m.tree.link(true).tree().link(false).tree().link(true).key(), []byte("key3"))
-	require.EqualValues(t, m.tree.link(false).key(), []byte("key8"))
-	require.EqualValues(t, m.tree.link(false).tree().link(true).key(), []byte("key7"))
-	require.EqualValues(t, m.tree.link(false).tree().link(true).tree().link(true).key(), []byte("key6"))
-	require.EqualValues(t, m.tree.link(false).tree().link(false).key(), []byte("key9"))
+	require.NoError(t, m.Tree.verify())
+	require.EqualValues(t, m.Tree.Key(), []byte("key5"))
+	require.EqualValues(t, m.Tree.Value(), []byte("value5"))
+	require.EqualValues(t, m.Tree.Link(true).key(), []byte("key2"))
+	require.EqualValues(t, m.Tree.Link(true).tree().Link(true).key(), []byte("key1"))
+	require.EqualValues(t, m.Tree.Link(true).tree().Link(true).tree().Link(true).key(), []byte("key0"))
+	require.EqualValues(t, m.Tree.Link(true).tree().Link(false).key(), []byte("key4"))
+	require.EqualValues(t, m.Tree.Link(true).tree().Link(false).tree().Link(true).key(), []byte("key3"))
+	require.EqualValues(t, m.Tree.Link(false).key(), []byte("key8"))
+	require.EqualValues(t, m.Tree.Link(false).tree().Link(true).key(), []byte("key7"))
+	require.EqualValues(t, m.Tree.Link(false).tree().Link(true).tree().Link(true).key(), []byte("key6"))
+	require.EqualValues(t, m.Tree.Link(false).tree().Link(false).key(), []byte("key9"))
 }
 
 func buildMerkWithDB() (*Merk, DB) {

@@ -5,6 +5,19 @@ import (
 	"math"
 )
 
+type OPType uint8
+
+const (
+	Put OPType = 1 << iota
+	Del
+)
+
+type OP struct {
+	O OPType
+	K []byte
+	V []byte
+}
+
 func applyTo(maybeTree *Tree, batch Batch) (*Tree, [][]byte, error) {
 	if maybeTree == nil {
 		t, err := build(batch)
@@ -36,7 +49,7 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte, error) {
 		err                           error
 	)
 
-	found, mid := binarySearchBy(tree.key(), batch)
+	found, mid := binarySearchBatch(tree.Key(), batch)
 
 	if found {
 		switch batch[mid].O {
@@ -61,7 +74,7 @@ func apply(tree *Tree, batch Batch) (*Tree, [][]byte, error) {
 			}
 
 			deletedKeys = append(deletedKeys, deletedKeysRight...)
-			deletedKeys = append(deletedKeys, tree.key())
+			deletedKeys = append(deletedKeys, tree.Key())
 
 			return maybeTree, deletedKeys, nil
 		default:
@@ -134,7 +147,7 @@ func maybeBalance(tree *Tree) *Tree {
 	}
 
 	var isLeft bool = balance < 0
-	var childIsLeft bool = balanceFactor(tree.child(isLeft)) > 0
+	var childIsLeft bool = balanceFactor(tree.Child(isLeft)) > 0
 
 	if (isLeft && childIsLeft) || (!isLeft && !childIsLeft) {
 		tree.walkExpect(isLeft, func(child *Tree) *Tree { return rotate(child, !isLeft) })
@@ -166,11 +179,11 @@ func rotate(tree *Tree, isLeft bool) *Tree {
 func remove(tree *Tree) *Tree {
 	var hasLeft, hasRight, isLeft bool
 
-	if tree.link(true) != nil {
+	if tree.Link(true) != nil {
 		hasLeft = true
 	}
 
-	if tree.link(false) != nil {
+	if tree.Link(false) != nil {
 		hasRight = true
 	}
 
@@ -206,7 +219,7 @@ func promoteEdge(tree, attach *Tree, isLeft bool) *Tree {
 func removeEdge(t *Tree, isLeft bool) (*Tree, *Tree) {
 	var tree, edge, maybeChild *Tree
 
-	if t.link(isLeft) == nil {
+	if t.Link(isLeft) == nil {
 		tree = t.detach(!isLeft)
 		return t, tree
 	}

@@ -83,7 +83,7 @@ func (m *Merk) Apply(batch Batch, withCommit bool) ([][]byte, error) {
 		prevKey = batch[i].K
 	}
 
-	// batch = sortBatch(batch)
+	// batch = SortBatch(batch)
 	return m.ApplyUnchecked(batch, withCommit)
 }
 

@@ -266,7 +266,7 @@ func buildBatch(b Batch, size int) Batch {
 			batch = append(batch, op)
 		}
 
-		return sortBatch(batch)
+		return SortBatch(batch)
 	}
 
 	// update 1/2 and delete 1/20
@@ -289,5 +289,5 @@ func buildBatch(b Batch, size int) Batch {
 		batch = append(batch, op2, op1)
 	}
 
-	return sortBatch(batch)
+	return SortBatch(batch)
 }

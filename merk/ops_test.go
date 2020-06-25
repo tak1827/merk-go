@@ -47,7 +47,7 @@ func TestSortBatch(t *testing.T) {
 	b = append(b, op4, op1, op2, op0, op3)
 	expect = append(expect, op0, op1, op2, op3, op4)
 
-	b = sortBatch(b)
+	b = SortBatch(b)
 
 	assert.EqualValues(t, expect, b)
 }

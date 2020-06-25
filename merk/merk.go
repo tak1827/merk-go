@@ -64,7 +64,7 @@ func (m *Merk) RootHash() Hash {
 	return m.Tree.Hash()
 }
 
-func (m *Merk) Apply(batch Batch) ([][]byte, error) {
+func (m *Merk) Apply(batch Batch, withCommit bool) ([][]byte, error) {
 	var prevKey []byte
 	for i := 0; i < len(batch); i++ {
 		// ensure keys in batch are sorted and unique
@@ -84,11 +84,11 @@ func (m *Merk) Apply(batch Batch) ([][]byte, error) {
 	}
 
 	// batch = sortBatch(batch)
-	return m.ApplyUnchecked(batch)
+	return m.ApplyUnchecked(batch, withCommit)
 }
 
 // TODO: separate commiting
-func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
+func (m *Merk) ApplyUnchecked(batch Batch, withCommit bool) ([][]byte, error) {
 	var (
 		deletedKeys [][]byte
 		err         error
@@ -114,7 +114,7 @@ func (m *Merk) ApplyUnchecked(batch Batch) ([][]byte, error) {
 	// }
 
 	// commit if db exist
-	if gDB != nil {
+	if gDB != nil && withCommit {
 		m.Commit(deletedKeys)
 	}
 

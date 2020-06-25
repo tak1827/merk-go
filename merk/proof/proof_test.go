@@ -99,7 +99,7 @@ func buildTree() (*m.Tree, m.DB) {
 	op15 := &m.OP{O: m.Put, K: []byte("key15"), V: []byte("value15")}
 
 	batch = append(batch, op01, op02, op03, op04, op05, op06, op07, op08, op09, op10, op11, op12, op13, op14, op15)
-	merk.Apply(batch)
+	merk.Apply(batch, true)
 
 	return merk.Tree, db
 }

@@ -27,7 +27,7 @@ func main() {
 	}
 
 	// apply insert
-	if _, err := m.Apply(insertBatch); err != nil {
+	if _, err := m.Apply(insertBatch, true); err != nil {
 		log.Panic(err)
 	}
 	fmt.Printf("inserted value of key0: %v\n", string(m.Get([]byte("key0"))))
@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// apply update
-	if _, err := m.Apply(updateBatch); err != nil {
+	if _, err := m.Apply(updateBatch, true); err != nil {
 		log.Panic(err)
 	}
 	fmt.Printf("updated value of key0: %v\n", string(m.Get([]byte("key0"))))
@@ -48,7 +48,7 @@ func main() {
 	}
 
 	// apply delete
-	deleteKeys, err := m.Apply(deleteBatch)
+	deleteKeys, err := m.Apply(deleteBatch, true)
 	if err != nil {
 		log.Panic(err)
 	}

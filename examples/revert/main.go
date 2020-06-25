@@ -36,7 +36,7 @@ func main() {
 		&m.OP{O: m.Del, K: []byte("key1")},
 		&m.OP{O: m.Put, K: []byte("key3"), V: []byte("value3")},
 	}
-	merk.Apply(batch)
+	merk.Apply(batch, true)
 
 	// revert tree using snapshot key
 	if err = merk.Revert(snapshotKey); err != nil {
@@ -53,7 +53,7 @@ func buildTree(merk *m.Merk) {
 	}
 
 	// apply insert
-	if _, err := merk.Apply(insertBatch); err != nil {
+	if _, err := merk.Apply(insertBatch, true); err != nil {
 		log.Panic(err)
 	}
 }

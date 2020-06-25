@@ -19,7 +19,7 @@ func Fuzz(data []byte) int {
 		&OP{O: Put, K: data, V: data},
 	}
 
-	if _, err := m.Apply(batch); err != nil {
+	if _, err := m.Apply(batch, true); err != nil {
 		return 0
 	}
 

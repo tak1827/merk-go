@@ -48,7 +48,7 @@ func buildTree(merk *m.Merk) {
 	}
 
 	// apply insert
-	if _, err := merk.Apply(insertBatch); err != nil {
+	if _, err := merk.Apply(insertBatch, true); err != nil {
 		log.Panic(err)
 	}
 }

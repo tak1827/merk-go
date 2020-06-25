@@ -29,13 +29,13 @@ func TestApply(t *testing.T) {
 	op9 := &OP{Put, []byte("9"), []byte("value")}
 
 	batch1 = append(batch1, op3, op6, op8)
-	m.Apply(batch1)
+	m.Apply(batch1, false)
 
 	batch2 = append(batch2, op0, op1, op2, op3, op6, op8)
-	m.Apply(batch2)
+	m.Apply(batch2, false)
 
 	batch3 = append(batch3, op4, op5, op7, op9)
-	m.Apply(batch3)
+	m.Apply(batch3, false)
 
 	require.NoError(t, m.Tree.verify())
 
@@ -52,19 +52,19 @@ func TestApply(t *testing.T) {
 	op19 := &OP{O: Del, K: []byte("9")}
 
 	batch4 = append(batch4, op11, op15, op16, op19)
-	delKeys4, _ := m.Apply(batch4)
+	delKeys4, _ := m.Apply(batch4, false)
 
 	require.EqualValues(t, [][]byte{[]byte("1"), []byte("5"), []byte("6"), []byte("9")}, delKeys4)
 	require.NoError(t, m.Tree.verify())
 
 	batch5 = append(batch5, op12, op13, op17)
-	delKeys5, _ := m.Apply(batch5)
+	delKeys5, _ := m.Apply(batch5, false)
 
 	require.EqualValues(t, [][]byte{[]byte("2"), []byte("3"), []byte("7")}, delKeys5)
 	require.NoError(t, m.Tree.verify())
 
 	batch6 = append(batch6, op10, op14, op18)
-	delKeys6, _ := m.Apply(batch6)
+	delKeys6, _ := m.Apply(batch6, false)
 
 	require.EqualValues(t, [][]byte{[]byte("0"), []byte("4"), []byte("8")}, delKeys6)
 	require.Nil(t, m.Tree)
@@ -87,7 +87,7 @@ func TestGet(t *testing.T) {
 	op9 := &OP{Put, []byte("key9"), []byte("value9")}
 
 	batch = append(batch, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
-	m.Apply(batch)
+	m.Apply(batch, false)
 
 	require.EqualValues(t, []byte("value0"), m.Get([]byte("key0")))
 	require.EqualValues(t, []byte("value1"), m.Get([]byte("key1")))
@@ -143,7 +143,7 @@ func TestCommitDel(t *testing.T) {
 	op19 := &OP{O: Del, K: []byte("key9")}
 
 	batch = append(batch, op11, op15, op16, op19)
-	delKeys, _ := m.Apply(batch)
+	delKeys, _ := m.Apply(batch, true)
 
 	require.EqualValues(t, [][]byte{[]byte("key1"), []byte("key5"), []byte("key6"), []byte("key9")}, delKeys)
 	require.NoError(t, m.Tree.verify())
@@ -164,7 +164,7 @@ func TestTakeSnapshot(t *testing.T) {
 		&OP{O: Del, K: []byte("key8")},
 		&OP{Put, []byte("key10"), []byte("value10")},
 	}
-	m.Apply(batch)
+	m.Apply(batch, true)
 
 	err = m.Revert(snapshotKey)
 	require.NoError(t, err)
@@ -200,7 +200,7 @@ func buildMerkWithDB() (*Merk, DB) {
 	op9 := &OP{Put, []byte("key9"), []byte("value9")}
 
 	batch = append(batch, op0, op1, op2, op3, op4, op5, op6, op7, op8, op9)
-	m.Apply(batch)
+	m.Apply(batch, true)
 
 	return m, db
 }
@@ -221,7 +221,7 @@ func BenchmarkApply(b *testing.B) {
 		batch = buildBatch(batch, size)
 		b.StartTimer()
 
-		if _, err := m.ApplyUnchecked(batch); err != nil {
+		if _, err := m.ApplyUnchecked(batch, false); err != nil {
 			// if _, err := m.Apply(batch); err != nil {
 			b.Fatal(err)
 		}
@@ -247,7 +247,7 @@ func BenchmarkCommit(b *testing.B) {
 		batch = buildBatch(batch, size)
 		b.StartTimer()
 
-		if _, err := m.ApplyUnchecked(batch); err != nil {
+		if _, err := m.ApplyUnchecked(batch, true); err != nil {
 			// if _, err := m.Apply(batch); err != nil {
 			b.Fatal(err)
 		}

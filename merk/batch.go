@@ -6,7 +6,7 @@ import (
 
 type Batch []*OP
 
-func sortBatch(b Batch) Batch {
+func SortBatch(b Batch) Batch {
 	sort.SliceStable(b, func(i, j int) bool {
 		return string(b[i].K) < string(b[j].K)
 	})
